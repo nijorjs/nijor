@@ -1,5 +1,5 @@
 # Nijor
-![Nijor](./src/images/logo.svg)
+![Nijor](./logo.svg)
 
 *Nijor is a modern frontend web framework that helps you to build websites with ease !* <br>
 
