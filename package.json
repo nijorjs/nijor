@@ -1,0 +1,39 @@
+{
+  "name": "@nijor/nijor",
+  "version": "1.0.0",
+  "author": "Deb Axom",
+  "main": "bin/cli.js",
+  "bin": {
+    "nijor": "bin/cli.js"
+  },
+  "dependencies": {
+    "@rollup/plugin-image": "^3.0.3",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-terser": "^0.4.4",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^25.0.1",
+    "picomatch": "^4.0.2",
+    "postcss": "^8.5.2",
+    "postcss-combine-duplicated-selectors": "^10.0.3",
+    "postcss-nested": "^7.0.2",
+    "postcss-nested-props": "^2.0.0",
+    "postcss-selector-parser": "^7.1.0",
+    "postcss-variable-compress": "^3.0.0",
+    "rolldown": "1.0.0-beta.3"
+  },
+  "description": "Unleash Your Web Wizardry !",
+  "license": "ISC",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nijorjs/nijor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nijorjs/nijor/issues"
+  },
+  "homepage": "https://nijorjs.github.io"
+}

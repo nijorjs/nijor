@@ -1,0 +1,20 @@
+{
+    "app":{
+        "name":"app",
+        "type":"spa",
+        "dir":"build"
+    },
+    "module":{
+        "input":"src/App.js",
+        "output":"assets/modules"
+    },
+    "styles":{
+        "input":"src/styles/style.css",
+        "output":"assets/style.css",
+        "modules":"src/styles/modules"
+    },
+    "server":{
+        "port":3000,
+        "live_reload":true
+    }
+}
