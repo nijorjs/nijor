@@ -24,7 +24,7 @@ window.addEventListener('popstate',async e =>{
     await window.nijor.renderRoute(path);
 
     window.nijor.previousRoute = path;
-    dispatchEvent('route',{msg:window.location.pathname});
+    dispatchEvent('route',window.location.pathname);
 });
 
 window.nijor.setRoute = function(url,DynamicComponent,parentURL){
