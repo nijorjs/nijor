@@ -14,8 +14,6 @@ export default options => {
         async transform(code, id) {
             let componentName = id.replace('/', '\\').split('\\').reverse();
 
-            // Msg Compiler : Compiling component
-
             if (filter(id)) {
                 let newCode = code.replace(new RegExp('<style', 'g'), '<n-style');
                 newCode = newCode.replace(new RegExp('</style', 'g'), '</n-style');

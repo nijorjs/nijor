@@ -21,9 +21,23 @@ function AddScope(scope) {
                     part = part.trim();
                     const parts = part.split(/(\s+|>\s*|\+\s*|~\s*)/);
                     return parts.map(sub => {
+          
+                        if (sub.indexOf("::") > -1) {
+                            let x = sub.split('::');
+                            x[0] += `[n-scope="${scope}"]`;
+                            return x.join('::');
+                        }
+
+                        if (sub.indexOf(":") > -1) {
+                            let x = sub.split(':');
+                            x[0] += `[n-scope="${scope}"]`;
+                            return x.join(':');
+                        }
+
                         if (/^[a-zA-Z0-9._#:[]/.test(sub)) {
                             return `${sub}[n-scope="${scope}"]`;
                         }
+
                         return sub;
                     }).join('');
                 }).join(', ');
