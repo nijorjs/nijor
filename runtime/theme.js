@@ -21,6 +21,7 @@ export function setTheme(theme) {
 export function autoTheme() {
 
     const Theme = window.localStorage.getItem('theme') || 'auto';
+    window.localStorage.setItem('theme','auto');
 
     if (Theme === 'auto') {
         let isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
