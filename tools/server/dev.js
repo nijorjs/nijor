@@ -84,7 +84,7 @@ wss.on('connection', (ws) => {
   ws.on('error', console.error);
 });
 
-fs.watch(rootDir, { recursive: true }, _ => {
+fs.watch(path.join(rootDir,'assets'), { recursive: true }, _ => {
   wss.clients.forEach(client => {
     if (client.readyState === 1) {
       client.send('reload');

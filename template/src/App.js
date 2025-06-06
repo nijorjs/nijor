@@ -5,5 +5,5 @@ import App from 'App.nijor';
 //@Routes()
 
 App.init('app');
-App.run();
+(async ()=>await App.run())();
 window.nijor.renderRoute(window.location.pathname);

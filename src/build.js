@@ -17,7 +17,7 @@ export default async function (__dirname) {
     const start = performance.now();
 
     await Compile({ minify: true });
-    if (fs.existsSync(outputDir)) await fs.promises.rmdir(outputDir,{forced:true, recursive:true});
+    if (fs.existsSync(outputDir)) await fs.promises.rm(outputDir,{forced:true, recursive:true});
     await fs.promises.mkdir(outputDir);
     await fs.promises.mkdir(path.join(outputDir,'assets'));
     await fs.promises.mkdir(path.join(outputDir,'pages'));
