@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import {Compile} from '../tools/compiler/index.js';
-import {copyFiles} from '../utils/copydir.js';
+import { Compile } from '../tools/compiler/index.js';
+import { copyFiles } from '../utils/copydir.js';
+import { Build } from '../tools/builder/index.js';
 
 const RootPath = process.cwd();
 
@@ -28,5 +29,12 @@ export default async function (__dirname) {
     const end = performance.now();
 
     console.log(`Built in ${(end - start).toFixed(2)}ms`);
+
+    if (NijorConfigFile.app.type==="ssr"){
+        const start = performance.now();
+        await Build(RootPath);
+        const end = performance.now();
+        console.log(`Created Static Pages in ${(end - start).toFixed(2)}ms`);
+    }
 
 }
