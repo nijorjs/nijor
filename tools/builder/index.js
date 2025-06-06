@@ -26,7 +26,10 @@ export async function Build(RootPath) {
     const Template = await fs.promises.readFile(path.join(RootPath, 'index.html'), 'utf-8');
     
     await crawlDirectory(path.join(RootPath, 'src/pages'));
-    const urls = Files.map(file => getRouteFromFilePath(file).url.replace(/'/g, ''));
+    const urls = Files.map(file => {
+        if(typeof file === 'string'  && file.endsWith("/_'")) return;
+        getRouteFromFilePath(file).url.replace(/'/g, '')
+    });
 
     urls.forEach(async url => {
         const html = await BuildPage(Template, BundledScript, url);
