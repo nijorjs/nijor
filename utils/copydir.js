@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+
 export async function copyFiles(fromDir, toDir) {
   try {
     // Ensure source directory exists

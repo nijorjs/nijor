@@ -43,7 +43,7 @@ export async function Build(RootPath) {
     });
 
     urls.forEach(async url => {
-        const html = await BuildPage(Template, BundledScript, url);
+        const html = minifyHTML(await BuildPage(Template, BundledScript, url));
         const distDir = path.join(RootPath, 'build');
         const pagesDir = path.join(distDir,'pages');
 
@@ -54,6 +54,6 @@ export async function Build(RootPath) {
         let pageUrl = path.join(pagesDir, `${url}.html`);
 
         await ensureDirectoryExistence(pageUrl);
-        await fs.promises.writeFile(pageUrl, minifyHTML(html));
+        await fs.promises.writeFile(pageUrl, html);
     });
 }

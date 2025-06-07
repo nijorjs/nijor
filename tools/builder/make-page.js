@@ -32,7 +32,9 @@ export async function BuildPage(template, script, url) {
                 dom.window.close();
             }
 
-        } catch (err) { };
+        } catch (err) { 
+            console.log(err);
+        };
     })
 }
 
@@ -45,4 +47,10 @@ function shimDom(dom) {
     dom.window.TextEncoder = TextEncoder;
     dom.window.TextDecoder = TextDecoder;
     dom.window.fetch = fetch;
+    dom.window.matchMedia = ()=> {
+        return {
+            matches: false,
+            addEventListener : ()=>{}
+        }
+    }
 }
