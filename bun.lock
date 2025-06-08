@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "newnijor",
+      "name": "nijor",
       "dependencies": {
         "@rollup/plugin-image": "^3.0.3",
         "@rollup/plugin-json": "^6.1.0",
