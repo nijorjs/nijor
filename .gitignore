@@ -1,4 +1,5 @@
 node_modules
 template/assets/*
 template/build/*
+test
 publish.sh

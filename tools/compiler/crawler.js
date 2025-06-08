@@ -2,18 +2,17 @@ import fs from 'fs/promises';
 import path from 'path';
 
 let Code = "";
-export let Files = [];
-let Slots  = ['/'];
-let serverRoutes = new Map();
+export let Files = new Set();
+let Slots = new Set();
+Slots.add('/');
 
 export async function crawlDirectory(directoryPath) {
   const files = await fs.readdir(directoryPath);
   for (const file of files) {
     const filePath = path.join(directoryPath, file);
 
-    
     const stats = await fs.stat(filePath);
-    if (stats.isFile() && path.basename(filePath)!=".nijor") Files.push(filePath);
+    if (stats.isFile() && path.basename(filePath)!=".nijor") Files.add(filePath);
     if (stats.isFile() && path.basename(filePath)=="_.nijor") AddSlot(filePath);
     else if (stats.isDirectory()) await crawlDirectory(filePath);
   }
@@ -63,14 +62,12 @@ function AddRoute(filepath){
 
     if(typeof url === 'string'  && url.endsWith("/_'")) return;
 
-    serverRoutes.set(url,filepath.replace(path.join(process.cwd(),'src/pages/'),'').replace('.nijor','.html'));
-
     Code += `window.nijor.setRoute(${url},()=>import('${filepath.replace(/\\/g,'/')}'),'${parentURL}');\n`;
 }
 
 async function AddSlot(filepath){
     let {url} = getRouteFromFilePath(filepath);
-    Slots.push(url.replace(/'/g,'').slice(0,-2));
+    Slots.add(url.replace(/'/g,'').slice(0,-2));
     Code += `window.nijor.addSlot(${url.slice(0,-3)+"'"},()=>import('${filepath.replace(/\\/g,'/')}'));`;
 }
 
@@ -86,7 +83,5 @@ export const crawl = async directory =>{
     let App = await fs.readFile(path.join(directory,'App.js'),'utf-8');
     App = App.replace('//@Routes()',Code);
 
-    global.serverRoutes = serverRoutes;
-    
     return App;
 }

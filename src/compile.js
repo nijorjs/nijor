@@ -4,11 +4,12 @@ import { Compile } from '../tools/compiler/index.js';
 
 export default async function (w) {
 
+    if (!fs.existsSync(path.join(process.cwd(),'nijor.config.json'))) process.quitProgram(`The file 'nijor.config.json' doesn't exist.\nNijor can't compile !`, [255, 251, 14]);
+
     const start = performance.now();
     await Compile({ minify: false });
     const end = performance.now();
     console.log(`Compiled in ${(end - start).toFixed(2)}ms`);
-
 
     // Watch for changes in the src folder
     if (w === "-w") {

@@ -10,7 +10,9 @@ import serveProject from '../src/serve.js';
 const cwDir = process.cwd();
 const __dirname = path.join(path.dirname(fileURLToPath(import.meta.url)),'../'); // The root level of nijor
 
-console.print = (text,[r, g, b]) => console.log(`\x1b[38;2;${r};${g};${b}m${text}\x1b[0m`); // colored console output
+const highlight = (text, [r,g,b])=> `\x1b[38;2;${r};${g};${b}m${text}\x1b[0m`;
+console.print = (text,[r, g, b]) => console.log(highlight(text,[r,g,b])); // colored console output
+
 
 process.quitProgram = (msg,[r=256, g=256, b=256]) => {
   console.print(msg,[r, g, b]);
@@ -24,13 +26,26 @@ const commandsMap = {
     "build": ()=> buildProject(__dirname),
     "compile": ()=> compileProject(userArgs[1]),
     "serve": ()=> serveProject(),
-    "-v": ()=> console.log('v4.5.9'),
+    "-v": ()=> console.log('v4.6.0'),
     "default": ()=> DefaultCommand()
 }
 
 function DefaultCommand(){
-    console.print("Welcome to the Nijor CLI !",[0,195,255]);
-    console.print("version : 4.5.9",[0,195,255]);
+    const command = userArgs[0];
+    if(!!!command){
+        console.print("Welcome to the Nijor CLI !",[0,195,255]);
+        console.print("version : 4.6.0",[0,195,255]);
+        return;
+    }
+
+    console.log(`"${highlight(command,[255,251,14])}" is not recognized by the ${highlight('Nijor CLI',[0,195,255])} ! \n`);
+    console.log(`The following commands are available :`);
+    console.log(`   ${highlight('create',[255,251,14])} : For creating a new project`);
+    console.log(`   ${highlight('compile',[255,251,14])} : For compiling a project in dev mode`);
+    console.log(`   ${highlight('build',[255,251,14])} : For building a project in production mode`);
+    console.log(`   ${highlight('serve',[255,251,14])} : For starting the dev server`);
+    console.log(`   ${highlight('-v',[255,251,14])} : To check version \n`);
+    console.log(`For more information, check docs at ${highlight('https://nijorjs.github.io',[0,195,255])}`);
 }
 
 try {

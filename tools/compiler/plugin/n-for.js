@@ -55,6 +55,8 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, specs, fil
         element.setAttribute('id', id);
         element.removeAttribute('n:for');
         element.setAttribute('n-for', fnName);
+        
+        process.ssrTemplate.add({id:id,content:''});
 
         const regex = new RegExp(`\\w+_${scope}`);
 

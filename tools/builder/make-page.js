@@ -24,9 +24,15 @@ export async function BuildPage(template, script, url) {
 
             dom.window.eval(script);
 
-            if (!eventName)resolveHtml();
+            if (!eventName) resolveHtml();
 
             function resolveHtml() {
+
+                for (const { id, content } of process.ssrTemplate){
+                    const element = dom.window.document.getElementById(id);
+                    if(element) element.innerHTML = content;
+                }
+                
                 let html = dom.serialize();
                 resolve(html);
                 dom.window.close();

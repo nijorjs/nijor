@@ -1,4 +1,4 @@
-import { Files, getRouteFromFilePath, crawlDirectory } from '../compiler/crawler.js';
+import { Files,crawlDirectory } from '../compiler/crawler.js';
 import { BuildPage } from './make-page.js';
 import { rolldown } from 'rolldown';
 import { minifyHTML } from '../../utils/minify.js';
@@ -35,15 +35,15 @@ export async function Build(RootPath) {
     const Template = await fs.promises.readFile(path.join(RootPath, 'index.html'), 'utf-8');
     
     await crawlDirectory(path.join(RootPath, 'src/pages'));
-    const urls = [];
+    const urls = new Set();
     Files.forEach(file=>{
-        const route = getRouteFromFilePath(file).url.replace(/'/g, '');
+        const route = getRoute(file);
         if(route.endsWith("/_")) return;
-        urls.push(route);
+        urls.add(route);
     });
 
     urls.forEach(async url => {
-        const html = minifyHTML(await BuildPage(Template, BundledScript, url));
+        const html = await BuildPage(Template, BundledScript, url);
         const distDir = path.join(RootPath, 'build');
         const pagesDir = path.join(distDir,'pages');
 
@@ -54,6 +54,33 @@ export async function Build(RootPath) {
         let pageUrl = path.join(pagesDir, `${url}.html`);
 
         await ensureDirectoryExistence(pageUrl);
-        await fs.promises.writeFile(pageUrl, html);
+        await fs.promises.writeFile(pageUrl, minifyHTML(html));
     });
+
+    // Handling the Routing Logic for the server side
+    urls.forEach(url=>{
+        let file = url === "/" ? "index.html" : `${url}.html`;
+        global.serverRoutesCode+= `
+router.get('${url}',async (req,res,params)=>{
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    const content = renderParams(await fs.promises.readFile(path.join(pagesDir,'${file}'),'utf-8'),params);
+    res.end(content);
+});
+        `
+    });
+
+}
+
+function getRoute(filepath){
+    filepath = filepath.replace(/\\/g,'/');
+    let route = '/'+filepath.split('src/pages/')[1].replace('.nijor','');
+    if(route.endsWith('/') && route!="/") route = route.substring(0, route.length-1);
+    const fragments = route.split('/');
+    const lastFragment = fragments[fragments.length-1];
+    let url = '';
+
+    if(fragments.length > 1 && lastFragment==="index") fragments.pop();
+    url = fragments.join('/') || '/';
+
+    return url;
 }
