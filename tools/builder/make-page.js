@@ -9,34 +9,21 @@ export async function BuildPage(template, script, url) {
     return new Promise(async (resolve, reject) => {
         try {
             const dom = new JSDOM(template, { runScripts: "outside-only", url: host + url });
-            
             shimDom(dom);
 
             if (eventName) {
                 const eventTimeout = setTimeout(() => {
                     if (dom.window._document) {
-                        resolveHtml();
+                        resolveHtml(dom,resolve);
                     }
                 }, timeout);
-                dom.window.addEventListener(eventName, resolveHtml);
+                dom.window.addEventListener(eventName, ()=>resolveHtml(dom,resolve));
                 dom.window.addEventListener(eventName, () => clearTimeout(eventTimeout));
             }
 
             dom.window.eval(script);
 
-            if (!eventName) resolveHtml();
-
-            function resolveHtml() {
-
-                for (const { id, content } of process.ssrTemplate){
-                    const element = dom.window.document.getElementById(id);
-                    if(element) element.innerHTML = content;
-                }
-                
-                let html = dom.serialize();
-                resolve(html);
-                dom.window.close();
-            }
+            if (!eventName) resolveHtml(dom,resolve);
 
         } catch (err) { 
             console.log(err);
@@ -59,4 +46,16 @@ function shimDom(dom) {
             addEventListener : ()=>{}
         }
     }
+}
+
+function resolveHtml(dom,resolve) {
+
+    for (const { id, content, func } of process.ssrTemplate){
+        const element = dom.window.document.getElementById(id);
+        if(element) element.innerHTML = content;
+    }
+    
+    let html = dom.serialize();
+    resolve(html);
+    dom.window.close();
 }

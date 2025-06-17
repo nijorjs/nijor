@@ -27,7 +27,7 @@ const includePathOptions = {
     'nijor/components': path.join(__dirname, 'runtime/components.js'),
     'nijor/router': path.join(__dirname, 'runtime/router.js'),
     'nijor/theme': path.join(__dirname, 'runtime/theme.js'),
-    'nijor/requests': path.join(__dirname, 'runtime/requests.js')
+    'nijor/reactivity': path.join(__dirname, 'runtime/reactivity.js')
   },
   paths: [srcPath],
   external: [],

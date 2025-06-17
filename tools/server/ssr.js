@@ -9,7 +9,6 @@ const assetsDir = path.join(__dirname,'assets');
 const pagesDir = path.join(__dirname,'pages');
 const PORT = 3000;
 
-// MIME types mapping
 const mimeTypes = {
   '.html': 'text/html',
   '.css': 'text/css',
@@ -33,7 +32,6 @@ const mimeTypes = {
   '.ttf': 'font/ttf'
 };
 
-// Router class
 class Router {
     constructor() {
         this.routes = new Map();
@@ -80,9 +78,6 @@ class Router {
     }
 }
 
-// Create router instance
-const router = new Router();
-
 function renderParams(content,params){
     for (let key in params){
         content = content.replaceAll(`[${key}]`,params[key]);
@@ -90,7 +85,6 @@ function renderParams(content,params){
     return content;
 }
 
-// Create server
 const server = createServer(async (req, res) => {
     try {
         // Try router first (only for GET)
@@ -144,7 +138,10 @@ const server = createServer(async (req, res) => {
     }
 });
 
+const router = new Router();
 //@Routes
+
+//@ServerFunctions
 
 // Start server
 server.listen(PORT, () => {

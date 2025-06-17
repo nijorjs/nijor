@@ -4,7 +4,8 @@ import { ReturnScripts } from './handleScripts.js';
 import CompileOnEventAttribute from './on-event.js';
 import Compile_nfor from './n-for.js';
 import AsyncLoadData from './async-load.js';
-import { minifyHTML } from "../../../utils/minify.js";
+import { minifyHTML } from '../../../utils/minify.js';
+import Reactivity from './reactivity.js';
 
 function CompileRouteAttribute(VirtualDocument) {
     VirtualDocument.window.document.body.querySelectorAll('a[n:route]').forEach(child => {
@@ -14,20 +15,6 @@ function CompileRouteAttribute(VirtualDocument) {
         child.setAttribute('href', route);
     });
     return VirtualDocument.window.document.body.innerHTML;
-}
-
-function compileReactiveVariable(input) {
-    const matches = [];
-    const output = input.replace(/\$\{@(\w+)\}/g, (match, word) => {
-        matches.push(word);
-        return `<nrv var="${word}" style="all:inhreit;background-color:transparent;">\${window.reactiveVar['${word}']}</nrv>`;
-    });
-    return { output, matches };
-}
-
-function transpileJScode(customJS) {
-    // Handle @varname replacement
-    return customJS.replace(/@(\w+)\b(?![^\n]*["'])/g, "window.reactiveVar['$1']");
 }
 
 let tmpVar;
@@ -61,11 +48,6 @@ export default async function (doc, scope, options, specsAttr, filename) {
     // Changing the name of the components ends here
 
     const VirtualDocument = new JSDOM(template);
-
-    // Compiling {@variable} starts here
-    let variable  = compileReactiveVariable(VirtualDocument.window.document.body.innerHTML);
-    VirtualDocument.window.document.body.innerHTML = variable.output;
-    // Compiling {@variable} ends here
 
     // Compiling n:slot starts here
     VirtualDocument.window.document.body.querySelectorAll('[n:slot]').forEach(child => {
@@ -120,6 +102,13 @@ export default async function (doc, scope, options, specsAttr, filename) {
     DeferScripts = tmpVar.jsCodeDefer;
     // Compiling on:{event} ends here
 
+    // Compiling {@variable} starts here
+    const {transformedHTML, prescript, deferscript} = Reactivity(VirtualDocument.window.document.body,JScode,DeferScripts,scope);
+    VirtualDocument.window.document.body.innerHTML = transformedHTML;
+    JScode = prescript;
+    DeferScripts = deferscript;
+    // Compiling {@variable} ends here
+
     // Running the imported nijor components
     let nijorComponents = [...VirtualDocument.window.document.body.querySelectorAll('*')].filter(el => (new RegExp(`\\w+_${scope}`)).test(el.tagName.toLowerCase()));
     nijorComponents.forEach(component => {
@@ -142,8 +131,6 @@ export default async function (doc, scope, options, specsAttr, filename) {
 
     template = VirtualDocument.window.document.body.innerHTML;
     template = minifyHTML(template);
-    JScode = transpileJScode(JScode);
-    DeferScripts = transpileJScode(DeferScripts);
     return {template,JScode,DeferScripts};
 }
 

@@ -1,10 +1,8 @@
 import component from './components.js';
-import reactiveVars from './reactivity.js';
 // window.nijor is an object used by Nijor during runtime.
-// window.nijorfunc is an object that stores all the events like on:click="clicked()" (on:{event}="func()") 
+// window.eventStorage is an object that stores all the events like on:click="clicked()" (on:{event}="func()") 
 window.nijor = { component };
 window.eventStorage = {};
-window.reactiveVar = reactiveVars;
 
 function modifyParenthesisContent(input,_this,$data) {
     return input.replace(/\((.*?)\)/g, (match, content) => {

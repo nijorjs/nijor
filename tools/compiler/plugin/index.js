@@ -3,18 +3,18 @@ import { JSDOM } from 'jsdom';
 import GenerateID from '../../../utils/uniqeid.js';
 import TemplateLoader from './template.js';
 import * as Scripts from './handleScripts.js' ;
+import path from 'path';
 
 export default options => {
     let opts = { include: '**/*.nijor' };
     const filter = createFilter(opts.include, opts.exclude);
-    let { rootdir } = options;
     return {
 
         name: "compiler",
-        async transform(code, id) {
-            let componentName = id.replace('/', '\\').split('\\').reverse();
+        async transform(code, filename) {
+            let componentName = filename.replace('/', '\\').split('\\').reverse();
 
-            if (filter(id)) {
+            if (filter(filename)) {
                 let newCode = code.replace(new RegExp('<style', 'g'), '<n-style');
                 newCode = newCode.replace(new RegExp('</style', 'g'), '</n-style');
                 newCode = newCode.replace(new RegExp('<body', 'g'), '<template');
@@ -41,7 +41,7 @@ export default options => {
                 // Handle Different Color Modes ::End
 
                 const scope = GenerateID(4, 6).toLowerCase();
-                const {template,JScode,DeferScripts} = await TemplateLoader(VirtualDocument,scope,options,specsAttr,id);
+                const { template, JScode, DeferScripts } = await TemplateLoader(VirtualDocument,scope,options,specsAttr,filename);
                 const importStatements =  Scripts.ReturnScripts(VirtualDocument,'pre').ImportStatements;
                 const midScript = Scripts.ReturnScripts(VirtualDocument,'mid').script;
                 const ImportComponents = Scripts.ReturnModule(VirtualDocument);
@@ -51,11 +51,11 @@ export default options => {
                     ${ImportComponents}
                     ${importStatements}
                     ${JScode}
-                      export default new window.nijor.component(async function(${specsAttr}){
-                            ${midScript}
-                            return(\`${template}\`);
-                      },async function(${specsAttr}){
-                            ${DeferScripts}
+                    export default new window.nijor.component(async function(${specsAttr}){
+                        ${midScript}
+                        return(\`${template}\`);
+                    },async function(${specsAttr}){
+                        ${DeferScripts}
                     });
                     `,
                     map: { mappings: "" }

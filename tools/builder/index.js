@@ -1,7 +1,7 @@
 import { Files,crawlDirectory } from '../compiler/crawler.js';
 import { BuildPage } from './make-page.js';
-import { rolldown } from 'rolldown';
 import { minifyHTML } from '../../utils/minify.js';
+import { rolldown } from 'rolldown';
 import fs from 'fs';
 import path from 'path';
 
@@ -33,7 +33,7 @@ export async function Build(RootPath) {
     // const RootPath = process.cwd();
     const BundledScript = await bundleJs(RootPath);
     const Template = await fs.promises.readFile(path.join(RootPath, 'index.html'), 'utf-8');
-    
+
     await crawlDirectory(path.join(RootPath, 'src/pages'));
     const urls = new Set();
     Files.forEach(file=>{
@@ -66,7 +66,7 @@ router.get('${url}',async (req,res,params)=>{
     const content = renderParams(await fs.promises.readFile(path.join(pagesDir,'${file}'),'utf-8'),params);
     res.end(content);
 });
-        `
+    `;
     });
 
 }

@@ -1,17 +1,45 @@
-const Handler = {
-    set(target, prop, receiver) {
+export function reactive(initialValue,varname,scope) {
 
-        if (target[prop] != null || target[prop] != undefined) {
-            target[prop] = receiver;
-            document.querySelectorAll(`nrv[var="${prop}"]`).forEach(el => {
-                el.innerText = receiver;
-            });
-        } else {
-            target[prop] = receiver;
+    const handlers = {
+        get(target, property) {
+            return target[property];
+        },
+        set(target, property, value) {
+            target[property] = value; 
+            listeners.forEach(listener => listener(reactiveObj.value));
+            notifyListeners(value,varname,scope);
+            return true;
         }
+    };
 
-        return true;
-    }
-};
+    const reactiveObj = new Proxy({ value: initialValue }, handlers);
+    const listeners = new Set();
 
-export default new Proxy({}, Handler);
+    return {
+        get value() {
+            return reactiveObj.value;
+        },
+        set value(newValue) {
+            reactiveObj.value = newValue;
+        },
+        init(){
+            notifyListeners(reactiveObj.value,varname,scope);
+        },
+        subscribe(listener) {
+            listeners.add(listener);
+            // listener(reactiveObj.value); // Call listener with initial value
+            return () => listeners.delete(listener); // Unsubscribe
+        }
+    };
+}
+
+function notifyListeners(value,varname,scope){
+    document.querySelectorAll(`._${varname}_${scope}`).forEach(element=>{
+        element.innerHTML = replaceVariable(element.innerHTML,`${varname}@${scope}`, value);
+    });
+}
+
+function replaceVariable(str, varName, value) {
+  const regex = new RegExp(`(<!--${varName}-->)(.*?)(<!--/-->)`, 'g');
+  return str.replace(regex, `$1${value}$3`);
+}
