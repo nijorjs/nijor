@@ -1,13 +1,11 @@
-export function reactive(initialValue,varname,scope) {
-
+export function reactive(initialValue) {
     const handlers = {
         get(target, property) {
             return target[property];
         },
         set(target, property, value) {
-            target[property] = value; 
-            listeners.forEach(listener => listener(reactiveObj.value));
-            notifyListeners(value,varname,scope);
+            target[property] = value;
+            notifyListeners(listeners,value);
             return true;
         }
     };
@@ -20,26 +18,26 @@ export function reactive(initialValue,varname,scope) {
             return reactiveObj.value;
         },
         set value(newValue) {
+            if(reactiveObj.value == newValue) return;
             reactiveObj.value = newValue;
         },
         init(){
-            notifyListeners(reactiveObj.value,varname,scope);
+            reactiveObj.value = initialValue;
+            // notifyListeners(listeners,reactiveObj.value);
         },
         subscribe(listener) {
             listeners.add(listener);
-            // listener(reactiveObj.value); // Call listener with initial value
             return () => listeners.delete(listener); // Unsubscribe
         }
-    };
+    }
 }
 
-function notifyListeners(value,varname,scope){
-    document.querySelectorAll(`._${varname}_${scope}`).forEach(element=>{
-        element.innerHTML = replaceVariable(element.innerHTML,`${varname}@${scope}`, value);
-    });
+function notifyListeners(listeners,value) {
+    listeners.forEach(listener => { try { listener(value) } catch (e) {} });
 }
 
-function replaceVariable(str, varName, value) {
-  const regex = new RegExp(`(<!--${varName}-->)(.*?)(<!--/-->)`, 'g');
-  return str.replace(regex, `$1${value}$3`);
+export function replaceTemplate(str, data) {
+  return str.replace(/(?<!\\)\{@(\w+)\}/g, (_, key) => {
+    return key in data ? data[key] : '';
+  }).replace(/\\\{@(\w+)\}/g, '{@$1}'); // remove the backslash for escaped ones
 }

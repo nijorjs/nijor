@@ -6,6 +6,7 @@ import Compile_nfor from './n-for.js';
 import AsyncLoadData from './async-load.js';
 import { minifyHTML } from '../../../utils/minify.js';
 import Reactivity from './reactivity.js';
+import switchShow from './switch-show.js';
 
 function CompileRouteAttribute(VirtualDocument) {
     VirtualDocument.window.document.body.querySelectorAll('a[n:route]').forEach(child => {
@@ -81,6 +82,13 @@ export default async function (doc, scope, options, specsAttr, filename) {
     VirtualDocument.window.document.body.innerHTML = CompileRouteAttribute(VirtualDocument);
     // Compiling n:route ends here
 
+    // Compiling {@variable} starts here
+    const {transformedHTML, prescript, deferscript} = Reactivity(VirtualDocument.window.document.body,JScode,DeferScripts,scope);
+    VirtualDocument.window.document.body.innerHTML = transformedHTML;
+    JScode = prescript;
+    DeferScripts = deferscript;
+    // Compiling {@variable} ends here
+
     // Compiling n:for starts here
     tmpVar = Compile_nfor(VirtualDocument,JScode,DeferScripts,scope,specsAttr,filename);
     VirtualDocument.window.document.body.innerHTML = tmpVar.template;
@@ -102,12 +110,11 @@ export default async function (doc, scope, options, specsAttr, filename) {
     DeferScripts = tmpVar.jsCodeDefer;
     // Compiling on:{event} ends here
 
-    // Compiling {@variable} starts here
-    const {transformedHTML, prescript, deferscript} = Reactivity(VirtualDocument.window.document.body,JScode,DeferScripts,scope);
-    VirtualDocument.window.document.body.innerHTML = transformedHTML;
-    JScode = prescript;
-    DeferScripts = deferscript;
-    // Compiling {@variable} ends here
+    // Compiling switch-show starts here
+    let [v1,v2] = switchShow(VirtualDocument.window.document.body,JScode,scope,specsAttr);
+    VirtualDocument.window.document.body.innerHTML = v1;
+    JScode = v2;
+    // Compiling switch-show ends here
 
     // Running the imported nijor components
     let nijorComponents = [...VirtualDocument.window.document.body.querySelectorAll('*')].filter(el => (new RegExp(`\\w+_${scope}`)).test(el.tagName.toLowerCase()));

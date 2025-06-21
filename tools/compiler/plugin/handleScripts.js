@@ -1,3 +1,5 @@
+import { $import } from '../plugin/transpile.js';
+
 export function returnScriptsContent(doc, execute) {
     try {
         return doc.window.document.querySelector('script[execute="' + execute + '"]').innerHTML;
@@ -5,13 +7,13 @@ export function returnScriptsContent(doc, execute) {
         return '';
     }
 }
-export function ReturnScripts(doc, execute) {
+export function ReturnScripts(doc, execute,scope,seed) {
     try {
         const importStatementRegex = /import[^']+(?= from .*).*/gm;
         let script = returnScriptsContent(doc, execute);
         let ImportStatements;
         try {
-            ImportStatements = script.match(importStatementRegex).join('');
+            ImportStatements = $import(script.match(importStatementRegex).join('\n'),scope,seed);
         } catch (error) {
             ImportStatements = '';
         }
@@ -37,60 +39,6 @@ export function ReturnModule(doc) {
         let componentVar = '$' + child.tagName.toLowerCase();
         let from = child.getAttribute('n:imported');
         Mod.push(`import ${componentVar} from "${from}";`);
-    });
-    return Mod.join('');
-}
-export function ReturnRunModule(doc, ComponentScope) {
-    let Mod = [];
-    doc.window.document.querySelectorAll("[n:imported]").forEach(child => {
-        if (child.hasAttribute('lazy')) return;
-
-        let componentVar = '$' + child.tagName.toLowerCase();
-        let OriginalComponentName = child.tagName.toLowerCase();
-        let componentName = OriginalComponentName + ComponentScope;
-        /* 
-        get the ComponentScope
-        Change the name of the im
-        Call the run function on the imported components.
-        $header.init('header'+ComponentScope);
-        $header.run();
-        */
-        Mod.push(`
-              ${componentVar}.init('${componentName}');
-              await ${componentVar}.run();
-            `);
-    });
-    return Mod.join('');
-}
-export function ReturnDynamicModule(doc) {
-    let Mod = [];
-    doc.window.document.querySelectorAll("[n:imported]").forEach(child => {
-        if (!(child.hasAttribute('lazy'))) return;
-        let componentVar = '$' + child.tagName.toLowerCase();
-        let from = child.getAttribute('n:imported');
-        Mod.push(`const {default : ${componentVar}} = await import("${from}");`);
-    });
-    return Mod.join('');
-}
-export function ReturnDynamicRunModule(doc, ComponentScope) {
-    let Mod = [];
-    doc.window.document.querySelectorAll("[n:imported]").forEach(child => {
-        if (!(child.hasAttribute('lazy'))) return;
-
-        let componentVar = '$' + child.tagName.toLowerCase();
-        let OriginalComponentName = child.tagName.toLowerCase();
-        let componentName = OriginalComponentName + ComponentScope;
-        /* 
-        get the ComponentScope
-        Change the name of the im
-        Call the run function on the imported components.
-        $header.init('header'+ComponentScope);
-        $header.run();
-        */
-        Mod.push(`
-            ${componentVar}.init('${componentName}');
-            await ${componentVar}.run();
-          `);
     });
     return Mod.join('');
 }

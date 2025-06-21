@@ -16,6 +16,7 @@ import fs from 'fs';
 
 process.cssClasses = new Set();
 process.ssrTemplate = new Set();
+process.seed = Math.floor(Math.random() * 900) + 100;
 
 const __dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../'); // The root level of nijor
 const RootPath = process.cwd();

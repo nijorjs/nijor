@@ -3,7 +3,6 @@ import { JSDOM } from 'jsdom';
 import GenerateID from '../../../utils/uniqeid.js';
 import TemplateLoader from './template.js';
 import * as Scripts from './handleScripts.js' ;
-import path from 'path';
 
 export default options => {
     let opts = { include: '**/*.nijor' };
@@ -15,10 +14,8 @@ export default options => {
             let componentName = filename.replace('/', '\\').split('\\').reverse();
 
             if (filter(filename)) {
-                let newCode = code.replace(new RegExp('<style', 'g'), '<n-style');
-                newCode = newCode.replace(new RegExp('</style', 'g'), '</n-style');
-                newCode = newCode.replace(new RegExp('<body', 'g'), '<template');
-                newCode = newCode.replace(new RegExp('</body', 'g'), '</template');
+                let newCode = replaceTags(code,'style','n-style');
+                newCode = replaceTags(newCode,'body','template');
 
                 const VirtualDocument = new JSDOM(newCode);
                 const specsAttr = VirtualDocument.window.document.querySelector('template').getAttribute('specs') || '';
@@ -42,7 +39,7 @@ export default options => {
 
                 const scope = GenerateID(4, 6).toLowerCase();
                 const { template, JScode, DeferScripts } = await TemplateLoader(VirtualDocument,scope,options,specsAttr,filename);
-                const importStatements =  Scripts.ReturnScripts(VirtualDocument,'pre').ImportStatements;
+                const importStatements = Scripts.ReturnScripts(VirtualDocument,'pre',scope,process.seed).ImportStatements;
                 const midScript = Scripts.ReturnScripts(VirtualDocument,'mid').script;
                 const ImportComponents = Scripts.ReturnModule(VirtualDocument);
                 
@@ -66,4 +63,9 @@ export default options => {
         }
 
     };
+}
+
+function replaceTags(code, oTag, nTag) {
+  const regex = new RegExp(`<${oTag}([^>]*)>([\\s\\S]*?)</${oTag}>`, 'i');
+  return code.replace(regex, (match, attrs, content) => `<${nTag}${attrs}>${content}</${nTag}>`);
 }
