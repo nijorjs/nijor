@@ -68,14 +68,7 @@ function convertTemplateSyntax(str) {
 
 export default function (document, prescript, deferscript, scope) {
 
-    if(!hasReactiveVariables(prescript)) {
-        return { transformedHTML : document.innerHTML, prescript, deferscript };
-    }
-
     let subscribeCode = ``;
-
-    const reactive = `_$reactive_${scope}`;
-    prescript = `import {reactive as ${reactive}, replaceTemplate as $Temp${scope}} from "nijor/reactivity";` + prescript;
 
     const elements = Array.from(document.querySelectorAll('*')).filter(element => Array.from(element.childNodes).filter(node => node.nodeType === 3).map(node => node.textContent).join('').match(/(?<!\\)\${@[^}]+}/));
     const InputRefElements = document.querySelectorAll('input[n:ref]');
@@ -142,9 +135,13 @@ export default function (document, prescript, deferscript, scope) {
         element.setAttribute('oninput', `window.eventStorage['${eventName}'](this)`);
     });
 
-    let { code , deferInit} = transpile(prescript, scope, reactive,process.seed);
-    prescript = code + subscribeCode;
-    deferscript = transpile(deferscript, scope, reactive,process.seed).code + deferInit;
+    if(hasReactiveVariables(prescript)) {
+        const reactive = `_$reactive_${scope}`;
+        prescript = `import {reactive as ${reactive}, replaceTemplate as $Temp${scope}} from "nijor/reactivity";` + prescript;
+        let { code , deferInit } = transpile(prescript, scope, reactive,process.seed);
+        prescript = code + subscribeCode;
+        deferscript = transpile(deferscript, scope, reactive,process.seed).code + deferInit;
+    }
 
     return { transformedHTML : document.innerHTML, prescript, deferscript };
 }

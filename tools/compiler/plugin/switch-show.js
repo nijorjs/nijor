@@ -1,5 +1,6 @@
 import GenerateId from '../../../utils/uniqeid.js';
 import { runComponents } from './sandbox.js';
+import { $reference } from './transpile.js';
 
 export default function (document, presecript, scope, specs) {
     let fncCode = ``;
@@ -13,12 +14,10 @@ export default function (document, presecript, scope, specs) {
         element.removeAttribute('n:switch');
         element.setAttribute('tmp','');
 
-        // console.log(element.innerHTML)
-
         const fncName = 'f' + id;
 
         [...element.getElementsByTagName('n:show')].forEach((block,index) => {
-            let condition = block.getAttribute('when').replace($var, $cvar + '.value');
+            let condition = $reference(block.getAttribute('when'),scope);
             let content = block.innerHTML;
             let [postHTMLcode, $num_components] = runComponents(block, scope);
             $total_components += $num_components;
@@ -34,6 +33,23 @@ export default function (document, presecript, scope, specs) {
             `;
         });
 
+        let defaultCode = '';
+
+        const defaultBlock = element.getElementsByTagName('n:default')[0];
+        if(defaultBlock){
+            let [postHTMLcode, $num_components] = runComponents(defaultBlock, scope);
+            $total_components += $num_components;
+
+            defaultCode = `
+
+                if($tmp==='d') return;
+                $div.setAttribute('tmp','d');
+                $div.innerHTML = \`${defaultBlock.innerHTML}\`;
+                ${postHTMLcode}
+                return;
+            `;
+        }
+
         element.innerHTML = "";
 
         let $async = 'async';
@@ -48,6 +64,7 @@ export default function (document, presecript, scope, specs) {
         const $div = document.getElementById('${id}');
         const $tmp = $div.getAttribute('tmp');
         ${fncCode}
+        ${defaultCode}
         }`;
 
         presecript += fncCode;

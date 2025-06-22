@@ -177,7 +177,7 @@ function $declaration(code,scope,reactive) {
   return [result.join('\n'),deferInit];
 }
 
-function $reference(code,scope) {
+export function $reference(code,scope) {
   let result = '';
   let i = 0;
   let inString = false;
