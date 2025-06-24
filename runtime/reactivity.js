@@ -22,8 +22,8 @@ export function reactive(initialValue) {
             reactiveObj.value = newValue;
         },
         init(resetState){
-            if(resetState) return;
-            reactiveObj.value = initialValue;
+            if(resetState===true) reactiveObj.value = initialValue;
+            notifyListeners(listeners,reactiveObj.value);
         },
         subscribe(listener) {
             listeners.add(listener);
