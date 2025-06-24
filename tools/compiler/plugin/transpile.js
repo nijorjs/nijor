@@ -155,14 +155,15 @@ function $declaration(code,scope,reactive) {
     }
 
     // Match const @varname = value;
-    let match = trimmedLine.match(/^const\s+@(\w+)\s*=\s*([^;]+);$/);
+    let match = trimmedLine.match(/^(const|let)\s+@(\w+)\s*=\s*([^;]+);$/);
     if (match) {
-      let varName = match[1];
-      let value = match[2].trim();
+      let bool = match[1] === 'const' ? true : false;
+      let varName = match[2];
+      let value = match[3].trim();
       reactiveVars.add(varName);
       let transformedValue = transformExpression(value);
       result.push(`const $_${varName}_${scope} = ${reactive}(${transformedValue});`);
-      deferInit+=`$_${varName}_${scope}.init();`;
+      deferInit+=`$_${varName}_${scope}.init(${bool});`;
       // Generate subscriptions for dependencies
       let dependencies = findDependencies(value);
       dependencies.forEach(dep => {
