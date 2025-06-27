@@ -40,17 +40,15 @@ class Router {
     // Only GET requests
     get(path, handler) {
         // Convert path pattern to regex and store parameter names
-        const paramNames = [];
-        const regexPath = path
-            .replace(/\[(.*?)\]/g, (_, name) => {
-                paramNames.push(name);
+        const params = [];
+        const regexPath = path.replace(/\[(.*?)\]/g, (_, name) => {
+                params.push(name);
                 return '([^/]+)';
-            })
-            .replace(/\//g, '\\/');
+            }).replace(/\//g, '\\/');
         
         this.routes.set({
             pattern: new RegExp(`^${regexPath}$`),
-            paramNames,
+            params,
             handler
         });
     }
@@ -59,14 +57,19 @@ class Router {
     async handle(req, res) {
         if (req.method !== 'GET') return false;
         
-        const urlPath = req.url.split('?')[0];
+        let urlPath = req.url.split('?')[0];
+        if (urlPath.endsWith('/') && urlPath != "/") urlPath = urlPath.substring(0, urlPath.length - 1); // convert /route/ to /route
+
+        if (urlPath.endsWith('.html')) {
+            urlPath = urlPath.slice(0, -5); // convert /route.html to /route
+        }
         
         for (const route of this.routes.keys()) {
             const match = urlPath.match(route.pattern);
             if (match) {
                 // Extract parameters
                 const params = {};
-                route.paramNames.forEach((name, index) => {
+                route.params.forEach((name, index) => {
                     params[name] = match[index + 1];
                 });
                 

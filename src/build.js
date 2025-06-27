@@ -53,7 +53,8 @@ export default async function (__dirname) {
         let serverCode = await fs.promises.readFile(path.join(__dirname,'tools/server/ssr.js'),'utf-8');
         serverCode = serverCode.replace('//@Routes',global.serverRoutesCode);
         await fs.promises.writeFile(path.join(outputDir,'server.js'),serverCode);
-        end = performance.now();
+        end = performance.now();  
+
         console.log(`Created server.js in ${(end - start).toFixed(2)}ms`);
         console.log('Project Built successfully !');
     }

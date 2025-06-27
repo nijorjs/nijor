@@ -18,22 +18,35 @@ export async function crawlDirectory(directoryPath) {
   }
 }
 
-function Convert2Regex(route){
-    // let regexpForAngularBrackets =  /<(.*?)>/g ;
-    let regexpForSquareBrackets =  /\[(.*?)\]/g ;
-
-    let allVars = route.match(regexpForSquareBrackets);
-    
-    allVars.forEach(el => {
-        route = route.replace(el,'(.*)');
-    });
-
-    return new RegExp(route);
-    // :  <(.*?)>
-    // :  \/docs\/(.*)\/(.*)\/
+function AddRoute(filepath){
+    let { url,parentURL } = getRoute(filepath);
+    let { params, pattern } = getRouteMapKey(url);
+    Code += `window.nijor.setRoute({pattern: ${pattern}, params : ${JSON.stringify(params)} },()=>import('${filepath.replace(/\\/g,'/')}'),'${parentURL}');\n`;
 }
 
-export function getRouteFromFilePath(filepath){
+async function AddSlot(filepath){
+    const url = getRoute(filepath).url.slice(0,-2);
+    Slots.add(url);
+    Code += `window.nijor.addSlot('${url}',()=>import('${filepath.replace(/\\/g,'/')}'));`;
+}
+
+export const crawl = async directory =>{
+
+    await crawlDirectory(path.join(directory,'pages'));
+    Files.forEach(file=>{
+        if(getRoute(file).url.endsWith("/_")) return;
+        AddRoute(file);
+    });
+
+    global.Slots = Slots;
+
+    let App = await fs.readFile(path.join(directory,'App.js'),'utf-8');
+    App = App.replace('//@Routes()',Code);
+
+    return App;
+}
+
+function getRoute(filepath){
     filepath = filepath.replace(/\\/g,'/');
     let route = '/'+filepath.split('src/pages/')[1].replace('.nijor','');
     if(route.endsWith('/') && route!="/") route = route.substring(0, route.length-1);
@@ -51,37 +64,16 @@ export function getRouteFromFilePath(filepath){
         }
     });
 
-    if(url.match(/\[(.*?)\]/)!=null) url = Convert2Regex(url);
-    else url = `'${url}'`;
-
-    return {url,parentURL};
+    return { url , parentURL };
 }
 
-function AddRoute(filepath){
-    let {url,parentURL} = getRouteFromFilePath(filepath);
-
-    if(typeof url === 'string'  && url.endsWith("/_'")) return;
-
-    Code += `window.nijor.setRoute(${url},()=>import('${filepath.replace(/\\/g,'/')}'),'${parentURL}');\n`;
-}
-
-async function AddSlot(filepath){
-    let {url} = getRouteFromFilePath(filepath);
-    Slots.add(url.replace(/'/g,'').slice(0,-2));
-    Code += `window.nijor.addSlot(${url.slice(0,-3)+"'"},()=>import('${filepath.replace(/\\/g,'/')}'));`;
-}
-
-export const crawl = async directory =>{
-
-    await crawlDirectory(path.join(directory,'pages'));
-    Files.forEach(file=>{
-        AddRoute(file);
-    });
-
-    global.Slots = Slots;
-
-    let App = await fs.readFile(path.join(directory,'App.js'),'utf-8');
-    App = App.replace('//@Routes()',Code);
-
-    return App;
+function getRouteMapKey(path) {
+    // Convert path pattern to regex and store parameter names
+    const params = [];
+    const regexPath = path.replace(/\[(.*?)\]/g, (_, name) => { params.push(name); return '([^/]+)'; }).replace(/\//g, '\\/');
+    
+    return{
+        pattern: new RegExp(`^${regexPath}$`),
+        params,
+    };
 }
