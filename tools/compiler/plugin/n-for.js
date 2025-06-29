@@ -70,13 +70,6 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, specs, fil
 
         element.innerHTML = '';
 
-
-        // getAttributesFromSpecs(extractTemplateWords(innerContent, [variable])).forEach(attr => {
-        //     if(attr==="") return;
-        //     element.setAttribute(`${attr}_`, "${" + attr + "}");
-        //     getAttributes_reload += `let ${attr} = div${scope}.getAttribute("${attr}_") || "{${attr}}";`;
-        // });
-
         const argumentsForFunction = extractTemplateWords(innerContent, [variable]);
 
         let fn = `
@@ -94,6 +87,7 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, specs, fil
         `;
 
         jsCode += fn;
+        element.setAttribute('nfor-arguments',`${argumentsForFunction}`);
 
         if (element.hasAttribute('n:reload')) {
             const reloadId = element.getAttribute('n:reload');
@@ -115,7 +109,6 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, specs, fil
                 await ${fnName}(${argumentsForFunction});
             };`;
 
-            element.setAttribute('nfor-arguments',`${argumentsForFunction}`);
         }
 
     });

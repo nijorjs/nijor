@@ -17,8 +17,8 @@ export async function BuildPage(template, script, url) {
                         resolveHtml(dom,resolve);
                     }
                 }, timeout);
-                dom.window.addEventListener(eventName, ()=>resolveHtml(dom,resolve));
-                dom.window.addEventListener(eventName, () => clearTimeout(eventTimeout));
+                dom.window.addEventListener(eventName, ()=> resolveHtml(dom,resolve));
+                dom.window.addEventListener(eventName, ()=> clearTimeout(eventTimeout));
             }
 
             dom.window.eval(script);
