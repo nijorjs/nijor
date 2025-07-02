@@ -36,14 +36,14 @@
         color: white;
     }
 </style>
-<template>
+<body>
     <div class="container">
         <a n:route="/"><img src="{Logo}"/></a>
         <div class="nav-bar">
             <a href="https://nijorjs.github.io/docs" class="nav-link">Docs</a>
         </div>
     </div>
-</template>
+</body>
 <script>
     import Logo from 'images/logo.svg';
 </script>

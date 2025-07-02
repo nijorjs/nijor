@@ -8,8 +8,8 @@
         letter-spacing: 1.5px;
     }
 </style>
-<template>
+<body>
     <div>
         <p>Nijor Template Website</p>
     </div>
-</template>
+</body>

@@ -1,10 +1,10 @@
-<template>
+<body>
     <div class="main">
         <img src="{Logo}">
         <span class="welcome-msg"> Welcome to the world of Nijor !</span>
         <p>Edit the src/ folder to reflect changes in this website !</p>
     </div>
-</template>
+</body>
 <style>
     .main{
         padding: 2rem;

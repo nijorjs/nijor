@@ -1,4 +1,4 @@
-<template>
+<body>
     <div class="main">
         <img src="{Logo}">
         <p>
@@ -7,7 +7,7 @@
         </p>
         <a n:route="/welcome"><button>Get Started</button></a>
     </div>
-</template>
+</body>
 <style>
     .main{
         padding: 2rem;

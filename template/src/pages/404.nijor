@@ -10,11 +10,11 @@
     }
     h1,p{color:white;}
 </style>
-<template>
+<body>
     <div>
         <h1>404 Not found!</h1>
         <p>It seems as if the page you are looking for is under construction or not found. <br>
         Please go to the <a n:route="/">Home</a> page.
         </p>
     </div>
-</template>
+</body>
