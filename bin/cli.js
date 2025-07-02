@@ -26,13 +26,13 @@ const commandsMap = {
     "build": ()=> buildProject(__dirname),
     "compile": ()=> compileProject(userArgs[1]),
     "serve": ()=> serveProject(),
-    "-v": ()=> console.log('v5.0.2'),
+    "-v": ()=> console.log('v5.0.3'),
     "default": ()=> DefaultCommand()
 }
 
 function DefaultCommand(){
     const command = userArgs[0];
-    if(!!!command) console.print("Welcome to the Nijor CLI (version : 5) !\n",[0,195,255]);
+    if(!!!command) console.print("Welcome to the Nijor CLI !\n",[0,195,255]);
     if(command) console.log(`"${highlight(command,[255,251,14])}" is not recognized by the ${highlight('Nijor CLI',[0,195,255])} ! \n`);
     console.log(`The following commands are available :`);
     console.log(`   ${highlight('create',[255,251,14])} : For creating a new project`);
