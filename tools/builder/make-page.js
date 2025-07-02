@@ -1,14 +1,16 @@
 import { JSDOM } from 'jsdom';
 
-export async function BuildPage(template, script, url, timeout) {
+export async function BuildPage(template, script, url) {
 
-    const host = 'nijor://building-pages';
+    const host = 'http://nijorjs.github.io';
     const eventName = 'app-loaded';
+    const timeout = 100;
 
     return new Promise(async (resolve, reject) => {
         try {
             const dom = new JSDOM(template, { runScripts: "outside-only", url: host + url });
             shimDom(dom);
+            dom.window.document.body.setAttribute('nijor-build',true);
 
             if (eventName) {
                 const eventTimeout = setTimeout(() => {
@@ -25,7 +27,7 @@ export async function BuildPage(template, script, url, timeout) {
             if (!eventName) resolveHtml(dom,resolve);
 
         } catch (err) { 
-            // console.log(err);
+            console.log(err);
         };
     })
 }
@@ -55,6 +57,7 @@ function resolveHtml(dom,resolve) {
     }
 
     dom.window.document.body.removeAttribute('theme');
+    dom.window.document.body.removeAttribute('nijor-build');
     let html = dom.serialize();
     resolve(html);
     dom.window.close();

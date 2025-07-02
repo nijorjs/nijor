@@ -47,7 +47,7 @@ export default async function (__dirname) {
         global.serverRoutesCode = '';
 
         let start = performance.now();
-        await Build(RootPath,eventEmitter,config.build.timeout || 5000);
+        await Build(RootPath,eventEmitter);
 
         eventEmitter.on('pages-built',async ()=> {
             let end = performance.now();

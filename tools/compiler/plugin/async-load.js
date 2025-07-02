@@ -28,7 +28,7 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
 
         let loadFn = `
             window.eventStorage['${funcName}'] = async function (${props}){
-                if(window.location.protocol==='nijor:') return;
+                if(document.body.hasAttribute('nijor-build')) return;
                 const div${scope} = document.getElementById('${id}');
                 try{
                     let ${variable} = await ${asyncFunc};

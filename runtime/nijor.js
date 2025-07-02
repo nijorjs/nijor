@@ -26,7 +26,7 @@ export function dispatchEvent(eventName, data = {}) {
 export const reload = reloadId => window.eventStorage[reloadId+"@reload"]();
 
 function RenderScript(){
-    if(window.location.protocol==='nijor:') return;
+    if(document.body.hasAttribute('nijor-build')) return;
     const hydrationTemplate = document.head.querySelector("script[type='hydration']");
     if(!hydrationTemplate) return;
     const script = document.createElement('script');
