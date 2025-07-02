@@ -1,6 +1,6 @@
 {
   "name": "@nijor/nijor",
-  "version": "5",
+  "version": "5.0",
   "author": "Deb Axom",
   "main": "bin/cli.js",
   "bin": {
