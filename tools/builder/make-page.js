@@ -26,7 +26,7 @@ export async function BuildPage(template, script, url) {
             if (!eventName) resolveHtml(dom,resolve);
 
         } catch (err) { 
-            console.log(err);
+            // console.log(err);
         };
     })
 }
@@ -55,6 +55,7 @@ function resolveHtml(dom,resolve) {
         if(type==='ssr') handleSSR(dom.window.document, data, dom.window.location.pathname);
     }
 
+    dom.window.document.body.removeAttribute('theme');
     let html = dom.serialize();
     resolve(html);
     dom.window.close();
