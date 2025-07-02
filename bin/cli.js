@@ -13,7 +13,6 @@ const __dirname = path.join(path.dirname(fileURLToPath(import.meta.url)),'../');
 const highlight = (text, [r,g,b])=> `\x1b[38;2;${r};${g};${b}m${text}\x1b[0m`;
 console.print = (text,[r, g, b]) => console.log(highlight(text,[r,g,b])); // colored console output
 
-
 process.quitProgram = (msg,[r=256, g=256, b=256]) => {
   console.print(msg,[r, g, b]);
   process.exit(1);
@@ -26,7 +25,7 @@ const commandsMap = {
     "build": ()=> buildProject(__dirname),
     "compile": ()=> compileProject(userArgs[1]),
     "serve": ()=> serveProject(),
-    "-v": ()=> console.log('v5.0.5'),
+    "-v": ()=> console.log('v5.0.6'),
     "default": ()=> DefaultCommand()
 }
 

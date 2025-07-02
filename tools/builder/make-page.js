@@ -4,7 +4,7 @@ export async function BuildPage(template, script, url) {
 
     const host = 'nijor://building-pages';
     const eventName = 'app-loaded';
-    const timeout = 5000;
+    const timeout = 7000;
 
     return new Promise(async (resolve, reject) => {
         try {
