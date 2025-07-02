@@ -111,9 +111,13 @@ export default async function (doc, scope, options, props, filename) {
     // Compiling switch-show ends here
 
     // Running the imported nijor components
+
+    let allComponents = [];
     let nijorComponents = [...VirtualDocument.window.document.body.querySelectorAll('*')].filter(el => (new RegExp(`\\w+_${scope}`)).test(el.tagName.toLowerCase()));
     nijorComponents.forEach(component => {
         const componentName = component.tagName.toLowerCase();
+        if(allComponents.includes(componentName)) return;
+        allComponents.push(componentName);
         DeferScripts=`$${componentName}.init('${componentName}');await $${componentName}.run();`+DeferScripts;
     });
 
