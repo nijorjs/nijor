@@ -1,10 +1,9 @@
 import { JSDOM } from 'jsdom';
 
-export async function BuildPage(template, script, url) {
+export async function BuildPage(template, script, url, timeout) {
 
     const host = 'nijor://building-pages';
     const eventName = 'app-loaded';
-    const timeout = 7000;
 
     return new Promise(async (resolve, reject) => {
         try {

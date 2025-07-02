@@ -29,7 +29,7 @@ async function ensureDirectoryExistence(filePath) {
     await fs.promises.mkdir(dirname);
 }
 
-export async function Build(RootPath,eventEmitter) {
+export async function Build(RootPath,eventEmitter,timeout) {
     // const RootPath = process.cwd();
     const BundledScript = await bundleJs(RootPath);
     const Template = await fs.promises.readFile(path.join(RootPath, 'index.html'), 'utf-8');
@@ -48,7 +48,7 @@ export async function Build(RootPath,eventEmitter) {
     urls.forEach(async (url,index) => {
 
         const { seed } = process;
-        const html = await BuildPage(Template, BundledScript, url);
+        const html = await BuildPage(Template, BundledScript, url, timeout);
         const distDir = path.join(RootPath, 'build');
         const pagesDir = path.join(distDir,'pages');
 

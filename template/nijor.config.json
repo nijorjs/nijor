@@ -16,5 +16,8 @@
     "server":{
         "port":3000,
         "live_reload":true
+    },
+    "build":{
+        "timeout":5000
     }
 }
