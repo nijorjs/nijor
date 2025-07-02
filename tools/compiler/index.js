@@ -75,7 +75,8 @@ export async function Compile(options) {
       image(),
       compiler(compilerOptions),
       options.minify && terser()
-    ]
+    ],
+    onwarn:(msg)=>{}
   });
 
   try {

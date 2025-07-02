@@ -9,7 +9,7 @@ async function bundleJs(RootPath) {
     try {
         const bundle = await rolldown({
             input: path.join(RootPath, 'assets/modules/app.js'),
-            plugins: [],
+            plugins: []
         });
         const { output } = await bundle.generate({
             format: 'iife',
