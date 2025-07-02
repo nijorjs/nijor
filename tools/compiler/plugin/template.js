@@ -5,8 +5,10 @@ import CompileOnEventAttribute from './on-event.js';
 import Compile_nfor from './n-for.js';
 import AsyncLoadData from './async-load.js';
 import { minifyHTML } from '../../../utils/minify.js';
+import { replaceTags } from '../../../utils/replaceTags.js';
 import Reactivity from './reactivity.js';
 import switchShow from './switch-show.js';
+import path from 'path';
 
 function CompileRouteAttribute(VirtualDocument) {
     VirtualDocument.window.document.body.querySelectorAll('a[n:route]').forEach(child => {
@@ -19,10 +21,8 @@ function CompileRouteAttribute(VirtualDocument) {
 }
 
 let tmpVar;
-let allNijorComponents = [];
-let allNijorComponentsMap = {};
 
-export default async function (doc, scope, options, specsAttr, filename) {
+export default async function (doc, scope, options, props, filename) {
 
     await WriteStyleSheet(doc,scope,options); // write the css file
 
@@ -34,21 +34,15 @@ export default async function (doc, scope, options, specsAttr, filename) {
    
     // Changing the name of the components starts here
     doc.window.document.querySelectorAll("[n:imported]").forEach(child => {
-        // The ComponentScope's value is added after every imported component.
-        // Ex :- <header> -> <headervxxh> depending upon ComponentScope
-        let OriginalComponentName = child.tagName.toLowerCase();
-        let componentName = `${OriginalComponentName}_${scope}`;
-        let cpname = new RegExp('<' + OriginalComponentName, 'gim');
-        let cpnameClosing = new RegExp('</' + OriginalComponentName + '>', 'gim');
-        template = template.replace(cpname, '<' + componentName);
-        template = template.replace(cpnameClosing, '</' + componentName + '>');
-
-        allNijorComponents.push(componentName);
-        allNijorComponentsMap[componentName] = OriginalComponentName;
+        const componentName = child.tagName.toLowerCase();
+        template = replaceTags(template,componentName,componentName+'_'+scope);
     });
     // Changing the name of the components ends here
 
     const VirtualDocument = new JSDOM(template);
+
+    // Checking if any component has n:server attribute
+    if(VirtualDocument.window.document.body.querySelectorAll('[n:async][n:server]').length!=0 && !isPage(filename)) process.quitProgram(`n:server attribute found inside a component in ${filename}\nn:server is used only inside pages ; not components`,[255,0,0]);
 
     // Compiling n:slot starts here
     VirtualDocument.window.document.body.querySelectorAll('[n:slot]').forEach(child => {
@@ -62,7 +56,7 @@ export default async function (doc, scope, options, specsAttr, filename) {
 
     // Adding the n-scope attribute starts here
     VirtualDocument.window.document.body.querySelectorAll('*').forEach((child) => {
-        if (child.hasAttribute('n-scope') || child.tagName.toLowerCase()==="nrv") return;
+        if (child.hasAttribute('n-scope') || child.tagName.toLowerCase().split('_')[1]===scope) return;
         child.setAttribute('n-scope', scope);
     });
     // Adding the n-scope attribute ends here
@@ -90,14 +84,14 @@ export default async function (doc, scope, options, specsAttr, filename) {
     // Compiling {@variable} ends here
 
     // Compiling n:for starts here
-    tmpVar = Compile_nfor(VirtualDocument,JScode,DeferScripts,scope,specsAttr,filename);
+    tmpVar = Compile_nfor(VirtualDocument,JScode,DeferScripts,scope,props,filename);
     VirtualDocument.window.document.body.innerHTML = tmpVar.template;
     JScode = tmpVar.jsCode;
     DeferScripts = tmpVar.jsCodeDefer;
     // Compiling n:for ends here
 
     // Compiling n:async starts here
-    tmpVar = AsyncLoadData(VirtualDocument,JScode,DeferScripts,scope,specsAttr,filename);
+    tmpVar = AsyncLoadData(VirtualDocument,JScode,DeferScripts,scope,props,filename);
     VirtualDocument.window.document.body.innerHTML = tmpVar.template;
     JScode = tmpVar.jsCode;
     DeferScripts = tmpVar.jsCodeDefer;
@@ -111,7 +105,7 @@ export default async function (doc, scope, options, specsAttr, filename) {
     // Compiling on:{event} ends here
 
     // Compiling switch-show starts here
-    let [v1,v2] = switchShow(VirtualDocument.window.document.body,JScode,scope,specsAttr);
+    let [v1,v2] = switchShow(VirtualDocument.window.document.body,JScode,scope,props);
     VirtualDocument.window.document.body.innerHTML = v1;
     JScode = v2;
     // Compiling switch-show ends here
@@ -119,21 +113,20 @@ export default async function (doc, scope, options, specsAttr, filename) {
     // Running the imported nijor components
     let nijorComponents = [...VirtualDocument.window.document.body.querySelectorAll('*')].filter(el => (new RegExp(`\\w+_${scope}`)).test(el.tagName.toLowerCase()));
     nijorComponents.forEach(component => {
-        let componentName = component.tagName.toLowerCase();
-        let componentNameOriginal = componentName.split('_')[0];
-        DeferScripts=`$${componentNameOriginal}.init('${componentName}');await $${componentNameOriginal}.run();`+DeferScripts;
+        const componentName = component.tagName.toLowerCase();
+        DeferScripts=`$${componentName}.init('${componentName}');await $${componentName}.run();`+DeferScripts;
     });
 
     // Executing the for loops
     VirtualDocument.window.document.body.querySelectorAll('[n-for]').forEach(element=>{
-        let fn = element.getAttribute('n-for');
+        const fnName = element.getAttribute('n-for');
         element.removeAttribute('n-for');
         let argumentsForFunction = "";
         if(element.hasAttribute('nfor-arguments')){
             argumentsForFunction = element.getAttribute('nfor-arguments') || "";
             element.removeAttribute('nfor-arguments');
         }
-        DeferScripts+=`await ${fn}(${argumentsForFunction});`;
+        DeferScripts+=`await window.eventStorage['${fnName}'](${argumentsForFunction});`;
     });
 
     template = VirtualDocument.window.document.body.innerHTML;
@@ -161,4 +154,12 @@ function getRouteFromFilePath(filepath) {
     });
 
     return parentURL;
+}
+
+function isPage(filename){
+    const RootPath = process.cwd();
+    const srcPath = path.join(RootPath, 'src');
+    filename = filename.replace(srcPath,'');
+    if(filename.startsWith('/pages/')) return true;
+    return false;
 }

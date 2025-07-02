@@ -1,15 +1,15 @@
-import { createServer } from 'http';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { createServer as createServer_/*--seed--*/ } from 'http';
+import fs_/*--seed--*/ from 'fs';
+import path_/*--seed--*/ from 'path';
+import { fileURLToPath as fileURLToPath_/*--seed--*/ } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const assetsDir = path.join(__dirname,'assets');
-const pagesDir = path.join(__dirname,'pages');
-const PORT = 3000;
+const __filename_/*--seed--*/ = fileURLToPath_/*--seed--*/(import.meta.url);
+const __dirname_/*--seed--*/ = path_/*--seed--*/.dirname(__filename_/*--seed--*/);
+const assetsDir_/*--seed--*/ = path_/*--seed--*/.join(__dirname_/*--seed--*/,'assets');
+const pagesDir_/*--seed--*/ = path_/*--seed--*/.join(__dirname_/*--seed--*/,'pages');
+const PORT_/*--seed--*/ = 3000;
 
-const mimeTypes = {
+const mimeTypes_/*--seed--*/ = {
   '.html': 'text/html',
   '.css': 'text/css',
   '.js': 'text/javascript',
@@ -32,7 +32,7 @@ const mimeTypes = {
   '.ttf': 'font/ttf'
 };
 
-class Router {
+class Router_/*--seed--*/ {
     constructor() {
         this.routes = new Map();
     }
@@ -81,27 +81,31 @@ class Router {
     }
 }
 
-function renderParams(content,params){
+function renderParams_/*--seed--*/(content,params){
     for (let key in params){
         content = content.replaceAll(`[${key}]`,params[key]);
     }
     return content;
 }
 
-const server = createServer(async (req, res) => {
+function renderTemplates_/*--seed--*/(content,computed,placeholderID){
+    return content.replace(`<!--@[${placeholderID}]-->`,computed);
+}
+
+const server_/*--seed--*/ = createServer_/*--seed--*/(async (req, res) => {
     try {
         // Try router first (only for GET)
-        const routeHandled = await router.handle(req, res);
+        const routeHandled = await router_/*--seed--*/.handle(req, res);
         if (routeHandled) return;
 
         // Fallback to static file serving
         let filePath = decodeURIComponent(req.url.split('?')[0]);
         
         if(filePath.startsWith("/assets")){
-            let ext = path.extname(filePath);
+            const ext = path_/*--seed--*/.extname(filePath);
             try {
-                const content = await fs.promises.readFile(assetsDir + filePath.replace('/assets', ''), 'utf-8');
-                const mimeType = mimeTypes[ext] || 'application/octet-stream';
+                const content = await fs_/*--seed--*/.promises.readFile(assetsDir_/*--seed--*/ + filePath.replace('/assets', ''), 'utf-8');
+                const mimeType = mimeTypes_/*--seed--*/[ext] || 'application/octet-stream';
                 res.writeHead(200, {
                     'content-Type': mimeType,
                     'content-Length': Buffer.byteLength(content)
@@ -109,16 +113,17 @@ const server = createServer(async (req, res) => {
                 res.end(content);
                 return;
             } catch (error) {
-                const content = await fs.promises.readFile(pagesDir + '/404.html', 'utf-8');
+                const content = await fs_/*--seed--*/.promises.readFile(pagesDir_/*--seed--*/ + '/404.html', 'utf-8');
                 res.writeHead(404, {
                     'content-Type': 'text/html',
                     'content-Length': Buffer.byteLength(content)
                 });
                 res.end(content);
+                return;
             }
         }
         
-        const content = await fs.promises.readFile(pagesDir + '/404.html', 'utf-8');
+        const content = await fs_/*--seed--*/.promises.readFile(pagesDir_/*--seed--*/ + '/404.html', 'utf-8');
         res.writeHead(404, {
             'content-Type': 'text/html',
             'content-Length': Buffer.byteLength(content)
@@ -127,7 +132,7 @@ const server = createServer(async (req, res) => {
 
     } catch (error) {
         if (error.code === 'ENOENT') {
-            const content = await fs.promises.readFile(pagesDir + '/404.html', 'utf-8');
+            const content = await fs_/*--seed--*/.promises.readFile(pagesDir_/*--seed--*/ + '/404.html', 'utf-8');
             res.writeHead(404, {
                 'content-Type': 'text/html',
                 'content-Length': Buffer.byteLength(content)
@@ -141,12 +146,12 @@ const server = createServer(async (req, res) => {
     }
 });
 
-const router = new Router();
+const router_/*--seed--*/ = new Router_/*--seed--*/();
 //@Routes
 
 //@ServerFunctions
 
 // Start server
-server.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}/`);
+server_/*--seed--*/.listen(PORT_/*--seed--*/, () => {
+    console.log(`Server running at http://localhost:${PORT_/*--seed--*/}/`);
 });

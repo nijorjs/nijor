@@ -1,6 +1,7 @@
 import createFilter from './createFilter.js';
 import { JSDOM } from 'jsdom';
 import GenerateID from '../../../utils/uniqeid.js';
+import { replaceTags } from '../../../utils/replaceTags.js';
 import TemplateLoader from './template.js';
 import * as Scripts from './handleScripts.js' ;
 
@@ -18,10 +19,11 @@ export default options => {
                 newCode = replaceTags(newCode,'body','template');
 
                 const VirtualDocument = new JSDOM(newCode);
-                const specsAttr = VirtualDocument.window.document.querySelector('template').getAttribute('specs') || '';
+                const document = VirtualDocument.window.document;
+                const props = document.querySelector('template').getAttribute('props') || document.querySelector('template').getAttribute('params') || '';
 
                 try {
-                    VirtualDocument.window.document.querySelectorAll('script').forEach(child => {
+                    document.querySelectorAll('script').forEach(child => {
                         if (child.hasAttribute('defer')) child.setAttribute('execute', 'post');
                         if (child.hasAttribute('mid')) child.setAttribute('execute', 'mid');
                         if (child.getAttribute('execute') === "post" || child.getAttribute('execute') === "mid") return;
@@ -31,27 +33,27 @@ export default options => {
 
                 // Handle Different Color Modes ::Start
                 try {
-                    VirtualDocument.window.document.querySelectorAll('n-style').forEach(child => {
+                    document.querySelectorAll('n-style').forEach(child => {
                         if (!(child.hasAttribute('mode'))) child.setAttribute('mode', 'normal');
                     });
                 } catch (error) { }
                 // Handle Different Color Modes ::End
 
                 const scope = GenerateID(4, 6).toLowerCase();
-                const { template, JScode, DeferScripts } = await TemplateLoader(VirtualDocument,scope,options,specsAttr,filename);
                 const importStatements = Scripts.ReturnScripts(VirtualDocument,'pre',scope,process.seed).ImportStatements;
                 const midScript = Scripts.ReturnScripts(VirtualDocument,'mid').script;
-                const ImportComponents = Scripts.ReturnModule(VirtualDocument);
-                
+                const ImportComponents = Scripts.ReturnModule(VirtualDocument,scope);
+                const { template, JScode, DeferScripts } = await TemplateLoader(VirtualDocument,scope,options,props,filename);
                 return {
                     code: `
+                    import component_${process.seed} from 'nijor/component';
                     ${ImportComponents}
                     ${importStatements}
                     ${JScode}
-                    export default new window.nijor.component(async function(${specsAttr}){
+                    export default new component_${process.seed}(async function(${props}){
                         ${midScript}
                         return(\`${template}\`);
-                    },async function(${specsAttr}){
+                    },async function(${props}){
                         ${DeferScripts}
                     });
                     `,
@@ -63,9 +65,4 @@ export default options => {
         }
 
     };
-}
-
-function replaceTags(code, oTag, nTag) {
-  const regex = new RegExp(`<${oTag}([^>]*)>([\\s\\S]*?)</${oTag}>`, 'i');
-  return code.replace(regex, (match, attrs, content) => `<${nTag}${attrs}>${content}</${nTag}>`);
 }

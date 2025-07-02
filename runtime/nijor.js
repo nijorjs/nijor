@@ -1,8 +1,7 @@
-import component from './components.js';
 // window.nijor is an object used by Nijor during runtime.
 // window.eventStorage is an object that stores all the events like on:click="clicked()" (on:{event}="func()") 
-window.nijor = { component };
-window.eventStorage = {};
+window.nijor = { };
+window.eventStorage = { };
 
 function modifyParenthesisContent(input,_this,$data) {
     return input.replace(/\((.*?)\)/g, (match, content) => {
@@ -25,3 +24,31 @@ export function dispatchEvent(eventName, data = {}) {
 };
 
 export const reload = reloadId => window.eventStorage[reloadId+"@reload"]();
+
+function RenderScript(){
+    if(window.location.protocol==='nijor:') return;
+    const hydrationTemplate = document.head.querySelector("script[type='hydration']");
+    if(!hydrationTemplate) return;
+    const script = document.createElement('script');
+    script.setAttribute('type','module');
+    script.innerHTML = hydrationTemplate.innerHTML;
+    document.head.appendChild(script);
+    document.head.removeChild(hydrationTemplate);
+}
+
+export async function Render(App,app='app'){
+    if(!window.nijor.renderRoute){ 
+        // If Router is not used.
+        App.init(app);
+        await App.run();
+        return;
+    }
+    if(document.body.getElementsByTagName(app).length===0){
+        await window.nijor.renderRoute(window.location.pathname,true);
+        RenderScript();
+        return;
+    }
+    App.init(app);
+    await App.run();
+    await window.nijor.renderRoute(window.location.pathname);
+}

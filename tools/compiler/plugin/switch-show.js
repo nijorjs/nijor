@@ -37,8 +37,8 @@ export default function (document, presecript, scope, specs) {
 
         const defaultBlock = element.getElementsByTagName('n:default')[0];
         if(defaultBlock){
-            let [postHTMLcode, $num_components] = runComponents(defaultBlock, scope);
-            $total_components += $num_components;
+            let [postHTMLcode, $components] = runComponents(defaultBlock, scope);
+            $total_components += $components.length;
 
             defaultCode = `
 

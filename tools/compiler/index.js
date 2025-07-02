@@ -15,8 +15,11 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 
 process.cssClasses = new Set();
-process.ssrTemplate = new Set();
-process.seed = Math.floor(Math.random() * 900) + 100;
+process.staticTemplate = new Set();
+process.serverCodeMap = new Map();
+process.serverParamsMap = new Map();
+process.serverFunctions = '';
+process.seed = '0'.repeat(Math.floor(Math.random() * 3) + 1);
 
 const __dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../'); // The root level of nijor
 const RootPath = process.cwd();
@@ -25,7 +28,7 @@ const srcPath = path.join(RootPath, 'src');
 const includePathOptions = {
   include: {
     'nijor': path.join(__dirname, 'runtime/nijor.js'),
-    'nijor/components': path.join(__dirname, 'runtime/components.js'),
+    'nijor/component': path.join(__dirname, 'runtime/component.js'),
     'nijor/router': path.join(__dirname, 'runtime/router.js'),
     'nijor/theme': path.join(__dirname, 'runtime/theme.js'),
     'nijor/reactivity': path.join(__dirname, 'runtime/reactivity.js')

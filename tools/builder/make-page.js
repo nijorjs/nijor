@@ -1,8 +1,8 @@
-import {JSDOM} from 'jsdom';
+import { JSDOM } from 'jsdom';
 
 export async function BuildPage(template, script, url) {
 
-    const host = 'http://nijorjs.github.io';
+    const host = 'nijor://building-pages';
     const eventName = 'app-loaded';
     const timeout = 5000;
 
@@ -50,12 +50,52 @@ function shimDom(dom) {
 
 function resolveHtml(dom,resolve) {
 
-    for (const { id, content, func } of process.ssrTemplate){
-        const element = dom.window.document.getElementById(id);
-        if(element) element.innerHTML = content;
+    for (const { type , data } of process.staticTemplate){
+        if(type==='csr') handleCSR(dom.window.document, data);
+        if(type==='ssr') handleSSR(dom.window.document, data, dom.window.location.pathname);
     }
-    
+
     let html = dom.serialize();
     resolve(html);
     dom.window.close();
+}
+
+function handleCSR(document, { id, content, script }){
+    const element = document.getElementById(id);
+    if(element) {
+        if(content!=null) element.innerHTML = content;
+        let hydartionScript = document.head.querySelector("script[type='hydration']");
+
+        if(script!=null){
+            if(!hydartionScript){
+                hydartionScript = document.createElement('script');
+                hydartionScript.setAttribute('type','hydration');
+                document.head.appendChild(hydartionScript);
+            }
+            hydartionScript.innerHTML+= script;
+        }
+
+    }
+}
+
+function handleSSR(document, data, route){
+    const element = document.getElementById(data.id);
+    if(element) {
+        element.innerHTML = data.content;
+        let hydartionScript = document.head.querySelector("script[type='hydration']");
+
+        if(data.script!=null){
+            if(!hydartionScript){
+                hydartionScript = document.createElement('script');
+                hydartionScript.setAttribute('type','hydration');
+                document.head.appendChild(hydartionScript);
+            }
+            hydartionScript.innerHTML+= data.script;
+        }
+        
+        if(!process.serverCodeMap.has(route)) process.serverCodeMap.set(route,new Set());
+        process.serverCodeMap.get(route).add(data.server);
+
+        if(!process.serverParamsMap.has(route)) process.serverParamsMap.set(route,data.params);
+    }
 }

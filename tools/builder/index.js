@@ -29,20 +29,25 @@ async function ensureDirectoryExistence(filePath) {
     await fs.promises.mkdir(dirname);
 }
 
-export async function Build(RootPath) {
+export async function Build(RootPath,eventEmitter) {
     // const RootPath = process.cwd();
     const BundledScript = await bundleJs(RootPath);
     const Template = await fs.promises.readFile(path.join(RootPath, 'index.html'), 'utf-8');
 
     await crawlDirectory(path.join(RootPath, 'src/pages'));
-    const urls = new Set();
+    let urls = new Set();
     Files.forEach(file=>{
         const route = getRoute(file);
         if(route.endsWith("/_")) return;
         urls.add(route);
     });
 
-    urls.forEach(async url => {
+    urls = [...urls];
+
+
+    urls.forEach(async (url,index) => {
+
+        const { seed } = process;
         const html = await BuildPage(Template, BundledScript, url);
         const distDir = path.join(RootPath, 'build');
         const pagesDir = path.join(distDir,'pages');
@@ -52,21 +57,40 @@ export async function Build(RootPath) {
 
         url = url === "/" ? "index" : url;
         let pageUrl = path.join(pagesDir, `${url}.html`);
-
+        
         await ensureDirectoryExistence(pageUrl);
         await fs.promises.writeFile(pageUrl, minifyHTML(html));
-    });
-
-    // Handling the Routing Logic for the server side
-    urls.forEach(url=>{
+        
+        url = url === "index" ? "/" : url;
         let file = url === "/" ? "index.html" : `${url}.html`;
+
+        let $code = ``;
+        if(process.serverCodeMap.has(url)){
+            $code = `
+            let data_${seed} = "";
+            ${[...process.serverCodeMap.get(url)].join('\n')}
+            `;
+        }
+
+        let getParams = "";
+        if(process.serverParamsMap.has(url)) {
+            const params = process.serverParamsMap.get(url);
+            if(params!=null) getParams = `let ${params} = params_${seed};`;
+        }
+
         global.serverRoutesCode+= `
-router.get('${url}',async (req,res,params)=>{
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    const content = renderParams(await fs.promises.readFile(path.join(pagesDir,'${file}'),'utf-8'),params);
-    res.end(content);
+router_${seed}.get('${url}',async (req_${seed},res_${seed},params_${seed})=>{
+    res_${seed}.writeHead(200, { 'Content-Type': 'text/html' });
+    let html_${seed} = await fs_${seed}.promises.readFile(path_${seed}.join(pagesDir_${seed},'${file}'),'utf-8');
+    ${getParams}
+    ${$code}
+    const content_${seed} = renderParams_${seed}(html_${seed},params_${seed});
+    res_${seed}.end(content_${seed});
 });
     `;
+
+        if(index + 1 === urls.length) eventEmitter.emit('pages-built');
+
     });
 
 }

@@ -28,17 +28,16 @@ export function ReturnScripts(doc, execute,scope,seed) {
     }
 
 }
-export function ReturnModule(doc) {
+export function ReturnModule(doc,scope) {
     /* convert the component imports to javascript imports
     Ex:- <header n:imported="components/header"> will convert to 
-          import $header from "components/header";
+          import $header_scope from "components/header";
     */
     let Mod = [];
     doc.window.document.querySelectorAll("[n:imported]").forEach(child => {
-        if (child.hasAttribute('lazy')) return;
         let componentVar = '$' + child.tagName.toLowerCase();
         let from = child.getAttribute('n:imported');
-        Mod.push(`import ${componentVar} from "${from}";`);
+        Mod.push(`import ${componentVar}_${scope} from "${from}";`);
     });
     return Mod.join('');
 }

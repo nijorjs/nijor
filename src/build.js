@@ -1,10 +1,12 @@
 import fs from 'fs';
 import path from 'path';
+import EventEmitter from 'events';
 import { Compile } from '../tools/compiler/index.js';
 import { copyFiles } from '../utils/copydir.js';
 import { Build } from '../tools/builder/index.js';
 
 const RootPath = process.cwd();
+const eventEmitter = new EventEmitter();
 
 export default async function (__dirname) {
 
@@ -45,18 +47,23 @@ export default async function (__dirname) {
         global.serverRoutesCode = '';
 
         let start = performance.now();
-        await Build(RootPath);
-        let end = performance.now();
-        console.log(`Created Static Pages in ${(end - start).toFixed(2)}ms`);
+        await Build(RootPath,eventEmitter);
 
-        start = performance.now();
-        let serverCode = await fs.promises.readFile(path.join(__dirname,'tools/server/ssr.js'),'utf-8');
-        serverCode = serverCode.replace('//@Routes',global.serverRoutesCode);
-        await fs.promises.writeFile(path.join(outputDir,'server.js'),serverCode);
-        end = performance.now();  
+        eventEmitter.on('pages-built',async ()=> {
+            let end = performance.now();
+            console.log(`Created Static Pages in ${(end - start).toFixed(2)}ms`);
 
-        console.log(`Created server.js in ${(end - start).toFixed(2)}ms`);
-        console.log('Project Built successfully !');
+            start = performance.now();
+            let serverCode = await fs.promises.readFile(path.join(__dirname,'tools/server/ssr.js'),'utf-8');
+            serverCode = serverCode.replaceAll('/*--seed--*/',process.seed);
+            serverCode = serverCode.replace('//@Routes',global.serverRoutesCode);
+            serverCode = serverCode.replace('//@ServerFunctions',process.serverFunctions);
+            await fs.promises.writeFile(path.join(outputDir,'server.js'),serverCode);
+            end = performance.now();
+
+            console.log(`Created server.js in ${(end - start).toFixed(2)}ms`);
+            console.log('Project Built successfully !');
+        });
     }
     
 }
