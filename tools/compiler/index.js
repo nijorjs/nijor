@@ -20,6 +20,7 @@ process.serverCodeMap = new Map();
 process.serverParamsMap = new Map();
 process.serverFunctions = '';
 process.seed = '0'.repeat(Math.floor(Math.random() * 3) + 1);
+process.sourceMap = {};
 
 const __dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../'); // The root level of nijor
 const RootPath = process.cwd();
@@ -76,7 +77,7 @@ export async function Compile(options) {
       compiler(compilerOptions),
       options.minify && terser()
     ],
-    onwarn:(msg)=>{}
+    onwarn: (msg) => { }
   });
 
   try {
@@ -85,7 +86,6 @@ export async function Compile(options) {
 
   if (!fs.existsSync(path.join(RootPath, 'assets'))) await fs.promises.mkdir(path.join(RootPath, 'assets'));
 
-
   let styleSheet = await fs.promises.readFile(path.join(RootPath, NijorJSON.styles.input), 'utf-8');
   styleSheet = await ModifyCSS(styleSheet);
   fs.promises.writeFile(compilerOptions.styleSheet, styleSheet);
@@ -93,9 +93,67 @@ export async function Compile(options) {
   await bundle.write({
     dir: path.join(RootPath, NijorJSON.module.output),
     format: 'es',
+    chunkFileNames : chunkFileNames
   });
 
   const styleModules = await loadStyleModules(path.join(RootPath, NijorJSON.styles.modules));
   const minifiedStyle = minifyCSS(treeshake_style(styleModules, process.cssClasses));
   await fs.promises.appendFile(compilerOptions.styleSheet, minifiedStyle);
+}
+
+function renameFile(filename, seed) {
+  let prefix = "";
+  let typeModule = "unkown";
+  filename = filename.replace(srcPath, '');
+  if (filename.endsWith('.nijor')) filename = filename.slice(0, -6);
+  let chunks = filename.split('/');
+  chunks.reverse().pop();
+  chunks.reverse();
+  if (chunks[0] === "pages") { prefix = 'p_'; typeModule = "page"; }
+  if (chunks[0] === "components") { prefix = 'c_'; typeModule = "component"; }
+  chunks.reverse().pop();
+  if (chunks[0] === '_') chunks[0] = 's_';
+  chunks.reverse();
+  let output = prefix + chunks.join('_' + seed + '_').replaceAll('[','--').replaceAll(']','--');
+  if(!output.endsWith('.js')) output = output+'.js';
+  return [output, typeModule];
+}
+
+function getRoute(filepath) {
+  filepath = filepath.replace(/\\/g, '/');
+  let route = '/' + filepath.split('src/pages/')[1].replace('.nijor', '');
+  if (route.endsWith('/') && route != "/") route = route.substring(0, route.length - 1);
+  const fragments = route.split('/');
+  const lastFragment = fragments[fragments.length - 1];
+  let url = '';
+
+  if (fragments.length > 1 && lastFragment === "index") fragments.pop();
+  url = fragments.join('/') || '/';
+
+  return url;
+}
+
+function chunkFileNames(file) {
+  const filename = file.moduleIds.reverse()[0];
+  const [outputFileName, typeModule] = renameFile(filename, process.seed);
+
+  if (typeModule === "page") {
+
+    const route = getRoute(filename);
+    if (route.endsWith('/_')) return outputFileName;
+
+    let $imports = [];
+
+    file.moduleIds.reverse().pop();
+    file.moduleIds.forEach(f => {
+      $imports.push(renameFile(f, process.seed)[0]);
+    });
+
+    process.sourceMap[route] = {
+      file: outputFileName,
+      depends: $imports
+    };
+  }
+
+  return outputFileName;
 }

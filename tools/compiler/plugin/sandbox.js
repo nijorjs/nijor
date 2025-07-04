@@ -6,6 +6,7 @@ export function runComponents(element, scope) {
 
     childComponents.forEach(component => {
         const componentName = component.tagName.toLowerCase();
+        if(allComponents.includes(componentName)) return;
         allComponents.push(componentName);
         runFn += `$${componentName}.init('${componentName}');await $${componentName}.run();`;
     });

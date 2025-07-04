@@ -3,7 +3,7 @@ import { WriteStyleSheet } from './style.js';
 import { ReturnScripts } from './handleScripts.js';
 import CompileOnEventAttribute from './on-event.js';
 import Compile_nfor from './n-for.js';
-import AsyncLoadData from './async-load.js';
+import FetchLoader from './n-fetch.js';
 import { minifyHTML } from '../../../utils/minify.js';
 import { replaceTags } from '../../../utils/replaceTags.js';
 import Reactivity from './reactivity.js';
@@ -27,11 +27,11 @@ export default async function (doc, scope, options, props, filename) {
     await WriteStyleSheet(doc,scope,options); // write the css file
 
     let template = doc.window.document.querySelector("template").innerHTML;
-    template = template.replace(/`/g, '\\`').replace(/{/g, '${').replace(/\\\${/g, '\{');
+    // template = template.replace(/`/g, '\\`').replace(/{/g, '${').replace(/\\\${/g, '\{');
 
     let DeferScripts = ReturnScripts(doc,'post').script;
     let JScode = ReturnScripts(doc,'pre').script;
-   
+
     // Changing the name of the components starts here
     doc.window.document.querySelectorAll("[n:imported]").forEach(child => {
         const componentName = child.tagName.toLowerCase();
@@ -40,6 +40,24 @@ export default async function (doc, scope, options, props, filename) {
     // Changing the name of the components ends here
 
     const VirtualDocument = new JSDOM(template);
+
+    // Changing {var} to ${var} inside the body
+    VirtualDocument.window.document.querySelectorAll('*').forEach(child=>{
+
+        child.childNodes.forEach(node=>{
+            if (node.nodeType === 3 && node.textContent.trim()) {
+                node.textContent = node.textContent.replace(/`/g, '\\`').replace(/{/g, '${').replace(/\\\${/g, '\{');
+            }
+        });
+
+        for(let attr of child.attributes){
+            let {name, value} = attr;
+            name = name.toLowerCase();
+            if(['n:for', 'n:fetch'].includes(name.toLowerCase())) continue;
+            child.setAttribute(name,value.replace(/{/g, '${').replace(/\\\${/g, '\{'));
+        }
+        
+    });
 
     // Checking if any component has n:server attribute
     if(VirtualDocument.window.document.body.querySelectorAll('[n:async][n:server]').length!=0 && !isPage(filename)) process.quitProgram(`n:server attribute found inside a component in ${filename}\nn:server is used only inside pages ; not components`,[255,0,0]);
@@ -83,19 +101,19 @@ export default async function (doc, scope, options, props, filename) {
     DeferScripts = deferscript;
     // Compiling {@variable} ends here
 
+    // Compiling n:fetch starts here
+    tmpVar = FetchLoader(VirtualDocument,JScode,DeferScripts,scope,props,filename);
+    VirtualDocument.window.document.body.innerHTML = tmpVar.template;
+    JScode = tmpVar.jsCode;
+    DeferScripts = tmpVar.jsCodeDefer;
+    // Compiling n:fetch ends here
+
     // Compiling n:for starts here
     tmpVar = Compile_nfor(VirtualDocument,JScode,DeferScripts,scope,props,filename);
     VirtualDocument.window.document.body.innerHTML = tmpVar.template;
     JScode = tmpVar.jsCode;
     DeferScripts = tmpVar.jsCodeDefer;
     // Compiling n:for ends here
-
-    // Compiling n:async starts here
-    tmpVar = AsyncLoadData(VirtualDocument,JScode,DeferScripts,scope,props,filename);
-    VirtualDocument.window.document.body.innerHTML = tmpVar.template;
-    JScode = tmpVar.jsCode;
-    DeferScripts = tmpVar.jsCodeDefer;
-    // Compiling n:async ends here
 
     // Compiling on:{event} starts here
     tmpVar = CompileOnEventAttribute(VirtualDocument,JScode,DeferScripts,scope);

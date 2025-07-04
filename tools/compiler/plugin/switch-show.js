@@ -2,7 +2,7 @@ import GenerateId from '../../../utils/uniqeid.js';
 import { runComponents } from './sandbox.js';
 import { $reference } from './transpile.js';
 
-export default function (document, presecript, scope, specs) {
+export default function (document, presecript, scope, props) {
     let fncCode = ``;
     let $total_components = 0;
 

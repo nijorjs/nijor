@@ -49,7 +49,7 @@ async function Render404(url) {
     return await Render404(url);
 }
 
-async function RenderRoute(url,hydrate=false) {
+async function RenderRoute(url) {
     url = url.split('?')[0];
     if (url.endsWith('/') && url != "/") url = url.substring(0, url.length - 1); // convert /route/ to /route
 
@@ -65,7 +65,7 @@ async function RenderRoute(url,hydrate=false) {
             const params = {};
             route.params.forEach((name, index) => { params[name] = match[index + 1]; });
 
-            await page(params,hydrate);
+            await page(params);
             return true;
         }
     }
@@ -75,9 +75,7 @@ async function RenderRoute(url,hydrate=false) {
 
 window.nijor.setRoute = function (urlData, DynamicComponent, parentURL) {
 
-    Routes.set(urlData, async (params,hydrate=false) => {
-
-        if(hydrate) return await DynamicComponent();
+    Routes.set(urlData, async (params) => {
 
         try {
             let { default: Page } = await DynamicComponent();

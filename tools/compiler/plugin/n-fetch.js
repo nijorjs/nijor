@@ -1,6 +1,7 @@
 import GenerateID from '../../../utils/uniqeid.js';
 import { minifyHTML } from '../../../utils/minify.js';
 import { runComponents } from './sandbox.js';
+import { document } from 'postcss';
 
 function getAttributesFromProps(props) {
     // Remove curly braces or square brackets and split by comma
@@ -8,25 +9,67 @@ function getAttributesFromProps(props) {
 }
 
 export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, filename) {
-    const allEligibleElements = VirtualDocument.window.document.querySelectorAll("div[n:async]");
-    allEligibleElements.forEach(div => {
+    const document = VirtualDocument.window.document;
+    const allEligibleElements = document.querySelectorAll("div[n:fetch]");
+    allEligibleElements.forEach(element => {
         const id = scope + GenerateID(3, 4);
-        div.setAttribute('id', id);
-        div.removeAttribute('n:async');
+        element.setAttribute('id', id);
+        const [variable, asyncFunc] = element.getAttribute('n:fetch').split(':');
+        element.removeAttribute('n:fetch');
 
-        const successBlock = div.getElementsByTagName('n:data')[0];
-        const loadingBlock = div.getElementsByTagName('n:loading')[0];
-        const errorBlock = div.getElementsByTagName('n:error')[0];
+        const successBlock = element.getElementsByTagName('n:data')[0];
+        const loadingBlock = element.getElementsByTagName('n:loading')[0];
+        const fallbackBlock = element.getElementsByTagName('n:error')[0];
+        const loopBlock = successBlock.getElementsByTagName('n:loop')[0];
 
-        let [variable, asyncFunc] = successBlock.getAttribute('fetch').split(':');
-        let errVar = errorBlock.getAttribute('catch') || `${scope}error`;
+        let errVar = fallbackBlock.getAttribute('catch') || `${scope}error`;
         let funcName = `${asyncFunc.split('(')[0]}_${scope}`;
 
         let RunComponentWithinSuccess = runComponents(successBlock, scope)[0];
-        let RunComponentWithinError = runComponents(errorBlock, scope)[0];
+        let RunComponentWithinFallback = runComponents(fallbackBlock, scope)[0];
         let RunComponentWithinLoading = runComponents(loadingBlock, scope)[0];
 
-        let loadFn = `
+        if(successBlock.hasAttribute('loop') && !loopBlock){
+            jsCode+=`
+            window.eventStorage['${funcName}'] = async function (${props}){
+                if(document.body.hasAttribute('nijor-build')) return;
+                const div${scope} = document.getElementById('${id}');
+                try{
+                    let content${scope}="";
+                    for(let ${variable} of await ${asyncFunc}){
+                        content${scope} += \`${minifyHTML(successBlock.innerHTML)}\`;
+                    }
+                    div${scope}.innerHTML = content${scope};
+                    ${RunComponentWithinSuccess}
+                }catch(${errVar}){
+                    div${scope}.innerHTML = \`${minifyHTML(fallbackBlock.innerHTML)}\`;
+                    ${RunComponentWithinFallback}
+                }
+            };`;
+        }else if(successBlock.hasAttribute('loop') && loopBlock){
+            const loopID = `${id}loop`;
+            const { parentElement } = loopBlock;
+            parentElement.replaceChild(document.createComment(loopID),loopBlock);
+            
+            jsCode+=`
+            window.eventStorage['${funcName}'] = async function (${props}){
+                if(document.body.hasAttribute('nijor-build')) return;
+                const div${scope} = document.getElementById('${id}');
+                try{
+                    let content${scope}="";
+                    for(let ${variable} of await ${asyncFunc}){
+                        content${scope} += \`${minifyHTML(loopBlock.innerHTML)}\`;
+                    }
+                    div${scope}.innerHTML = \`${minifyHTML(successBlock.innerHTML)}\`.replace('<!--${loopID}-->',content${scope});
+                    ${RunComponentWithinSuccess}
+                }catch(${errVar}){
+                    div${scope}.innerHTML = \`${minifyHTML(fallbackBlock.innerHTML)}\`;
+                    ${RunComponentWithinFallback}
+                }
+            };`;
+
+        }else{
+            jsCode+=`
             window.eventStorage['${funcName}'] = async function (${props}){
                 if(document.body.hasAttribute('nijor-build')) return;
                 const div${scope} = document.getElementById('${id}');
@@ -35,20 +78,19 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
                     div${scope}.innerHTML = \`${minifyHTML(successBlock.innerHTML)}\`;
                     ${RunComponentWithinSuccess}
                 }catch(${errVar}){
-                    div${scope}.innerHTML = \`${minifyHTML(errorBlock.innerHTML)}\`;
-                    ${RunComponentWithinError}
+                    div${scope}.innerHTML = \`${minifyHTML(fallbackBlock.innerHTML)}\`;
+                    ${RunComponentWithinFallback}
                 }
-            }
-        `;
+            };`;
+        }
 
-        jsCode += loadFn;
         jsCodeDefer += `await window.eventStorage['${funcName}'](${props});`;
-        div.innerHTML = minifyHTML(loadingBlock.innerHTML);
+        element.innerHTML = minifyHTML(loadingBlock.innerHTML);
 
         let getAttributes_reload = "";
         if (props) {
             getAttributesFromProps(props).forEach(attr => {
-                div.setAttribute(`${attr}_`, "${" + attr + "}");
+                element.setAttribute(`${attr}_`, "${" + attr + "}");
                 getAttributes_reload += `let ${attr} = div${scope}.getAttribute("${attr}_");`;
             });
         }
@@ -59,10 +101,10 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
         await window.eventStorage['${funcName}'](${props});
         `;
 
-        if (div.hasAttribute('n:reload')) {
-            let reloadId = div.getAttribute('n:reload');
-            div.setAttribute(`onreload-${reloadId}`, `window.eventStorage['${reloadId}@reload']()`);
-            div.removeAttribute('n:reload');
+        if (element.hasAttribute('n:reload')) {
+            let reloadId = element.getAttribute('n:reload');
+            element.setAttribute(`onreload-${reloadId}`, `window.eventStorage['${reloadId}@reload']()`);
+            element.removeAttribute('n:reload');
 
             jsCode += `window.eventStorage['${reloadId}@reload'] = async function() {
                 const div${scope} = document.getElementById('${id}');
@@ -75,23 +117,57 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
             csrHydrationScript = `window.eventStorage['${reloadId}@reload']();`;
         }
 
-        if (div.hasAttribute('n:server')){
+        if (element.hasAttribute('n:server')){
 
             const propsArray = props2Array(props);
             const success = minifyHTML(formatProps(successBlock.innerHTML,propsArray));
-            const failure = minifyHTML(formatProps(errorBlock.innerHTML,propsArray));
+            const failure = minifyHTML(formatProps(fallbackBlock.innerHTML,propsArray));
 
             let $fetchFn = asyncFunc.split('(')[0]+'_'+scope+'('+asyncFunc.split('(')[1];
             let $server_code = `
+                let data_${scope} = "";
                 try{
                     let ${variable} = await ${$fetchFn};
-                    data_${process.seed} = \`${success}\`;
+                    data_${scope} = \`${success}\`;
                 }catch(${errVar}){
-                    data_${process.seed} = \`${failure}\`;
+                    data_${scope} = \`${failure}\`;
                 }
                 
-                html_${process.seed} = renderTemplates_${process.seed}(html_${process.seed},data_${process.seed},'${id}');
+                html_${process.seed} = renderTemplates_${process.seed}(html_${process.seed},data_${scope},'${id}');
             `;
+
+            if(successBlock.hasAttribute('loop') && !loopBlock){
+                $server_code = `
+                    let data_${scope} = "";
+                    try{
+                        for(let ${variable} of await ${$fetchFn}){
+                            data_${scope} += \`${success}\`;
+                        }
+                    }catch(${errVar}){
+                        data_${scope} = \`${failure}\`;
+                    }
+                    
+                    html_${process.seed} = renderTemplates_${process.seed}(html_${process.seed},data_${scope},'${id}');
+                `;
+            }
+
+            if(successBlock.hasAttribute('loop') && loopBlock){
+                const loop = minifyHTML(formatProps(loopBlock.innerHTML,propsArray));
+                $server_code = `
+                    let data_${scope} = "";
+                    try{
+                        let content_${scope} = "";
+                        for(let ${variable} of await ${$fetchFn}){
+                            content_${scope} += \`${loop}\`;
+                        }
+                        data_${scope} = \`${success}\`.replace('<!--${id}loop-->',content_${scope});
+                    }catch(${errVar}){
+                        data_${scope} = \`${failure}\`;
+                    }
+                    
+                    html_${process.seed} = renderTemplates_${process.seed}(html_${process.seed},data_${scope},'${id}');
+                `;
+            }
 
             let $fetch = extractAndRenameFunction(jsCode,asyncFunc.split('(')[0],scope);
             process.serverFunctions += $fetch;
@@ -101,13 +177,13 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
                 ${getAttributes_reload==="" ? "" :`const div${scope} = document.getElementById('${id}');`}
                 ${getAttributes_reload}
                 ${RunComponentWithinSuccess}
-                ${RunComponentWithinError}
+                ${RunComponentWithinFallback}
             }
             `;
 
             let hydartionScript = `await window.eventStorage['server:${funcName}']();`;
 
-            if(RunComponentWithinSuccess=="" && RunComponentWithinError==""){
+            if(RunComponentWithinSuccess=="" && RunComponentWithinFallback==""){
                 hydrationFunction = '';
                 hydartionScript = null;
             }
@@ -126,7 +202,7 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
             jsCode+= hydrationFunction;
         }
 
-        if(!div.hasAttribute('n:server')){
+        if(!element.hasAttribute('n:server')){
             process.staticTemplate.add({
             type:'csr',
                 data:{
@@ -137,11 +213,11 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
             });
         }
 
-        if(div.hasAttribute('n:server')) div.removeAttribute('n:server');
+        if(element.hasAttribute('n:server')) element.removeAttribute('n:server');
 
     });
 
-    let template = VirtualDocument.window.document.body.innerHTML;
+    let template = document.body.innerHTML;
     return { template, jsCode, jsCodeDefer };
 }
 

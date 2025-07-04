@@ -67,7 +67,6 @@ export async function Build(RootPath,eventEmitter) {
         let $code = ``;
         if(process.serverCodeMap.has(url)){
             $code = `
-            let data_${seed} = "";
             ${[...process.serverCodeMap.get(url)].join('\n')}
             `;
         }

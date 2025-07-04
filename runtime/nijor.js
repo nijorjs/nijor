@@ -21,7 +21,7 @@ export function dispatchEvent(eventName, data = {}) {
         let EvalFunc = new Function('_this','$data', `${fnExpression}`);
         EvalFunc(element,data);
     });
-};
+}
 
 export const reload = reloadId => window.eventStorage[reloadId+"@reload"]();
 
@@ -44,7 +44,6 @@ export async function Render(App,app='app'){
         return;
     }
     if(document.body.getElementsByTagName(app).length===0){
-        await window.nijor.renderRoute(window.location.pathname,true);
         RenderScript();
         return;
     }
