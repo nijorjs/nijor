@@ -109,7 +109,15 @@ function renameFile(filename, seed) {
     output = output.split('/').join('');
     return [output, typeModule];
   }
-  filename = filename.replace(srcPath, '');
+
+  filename = filename.replace(RootPath, '');
+
+  if(filename.startsWith('/node_modules')){
+    let output = filename.replace('node_modules','').split('/').join('').replaceAll('.','')+'.js';
+    return [output,typeModule];
+  }
+
+  filename = filename.replace('/src','');
   if (filename.endsWith('.nijor')) filename = filename.slice(0, -6);
   let chunks = filename.split('/');
   chunks.reverse().pop();
