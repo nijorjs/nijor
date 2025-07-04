@@ -9,6 +9,7 @@ import { crawl } from './crawler.js';
 import compiler from './plugin/index.js';
 import { ModifyCSS } from './plugin/style.js';
 import { minifyCSS } from '../../utils/minify.js';
+import { getRoute } from '../../utils/getRoute.js';
 import { treeshake as treeshake_style } from './plugin/css-treeshake.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -67,7 +68,6 @@ export async function Compile(options) {
 
   const bundle = await rolldown({
     input: 'app',
-    preserveEntrySignatures: false,
     plugins: [
       includepaths(includePathOptions),
       json(),
@@ -117,20 +117,6 @@ function renameFile(filename, seed) {
   let output = prefix + chunks.join('_' + seed + '_').replaceAll('[','--').replaceAll(']','--');
   if(!output.endsWith('.js')) output = output+'.js';
   return [output, typeModule];
-}
-
-function getRoute(filepath) {
-  filepath = filepath.replace(/\\/g, '/');
-  let route = '/' + filepath.split('src/pages/')[1].replace('.nijor', '');
-  if (route.endsWith('/') && route != "/") route = route.substring(0, route.length - 1);
-  const fragments = route.split('/');
-  const lastFragment = fragments[fragments.length - 1];
-  let url = '';
-
-  if (fragments.length > 1 && lastFragment === "index") fragments.pop();
-  url = fragments.join('/') || '/';
-
-  return url;
 }
 
 function chunkFileNames(file) {

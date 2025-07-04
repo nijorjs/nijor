@@ -1,6 +1,7 @@
 import { Files,crawlDirectory } from '../compiler/crawler.js';
 import { BuildPage } from './make-page.js';
 import { minifyHTML } from '../../utils/minify.js';
+import { getRoute } from '../../utils/getRoute.js';
 import { rolldown } from 'rolldown';
 import fs from 'fs';
 import path from 'path';
@@ -92,18 +93,4 @@ router_${seed}.get('${url}',async (req_${seed},res_${seed},params_${seed})=>{
 
     });
 
-}
-
-function getRoute(filepath){
-    filepath = filepath.replace(/\\/g,'/');
-    let route = '/'+filepath.split('src/pages/')[1].replace('.nijor','');
-    if(route.endsWith('/') && route!="/") route = route.substring(0, route.length-1);
-    const fragments = route.split('/');
-    const lastFragment = fragments[fragments.length-1];
-    let url = '';
-
-    if(fragments.length > 1 && lastFragment==="index") fragments.pop();
-    url = fragments.join('/') || '/';
-
-    return url;
 }
