@@ -104,7 +104,7 @@ export async function Compile(options) {
 function renameFile(filename, seed) {
   let prefix = "";
   let typeModule = "unkown";
-  if(filename.indexOf(path.join(__dirname,'runtime'))) return filename;
+  if(filename.indexOf(path.join(__dirname,'runtime'))) return [filename, typeModule];
   filename = filename.replace(srcPath, '');
   if (filename.endsWith('.nijor')) filename = filename.slice(0, -6);
   let chunks = filename.split('/');
