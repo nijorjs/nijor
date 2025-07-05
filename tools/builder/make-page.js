@@ -71,7 +71,9 @@ function resolveHtml(dom,resolve) {
     let urlChunks = route.replace('/','').split('/');
     const slotFile = `${urlChunks[0].replaceAll('[','-').replaceAll(']','-')}-_.js`;
     const slotPath = path.join(modulesPath,slotFile);
-    if (fs.existsSync(slotPath)) hydartionScript.innerHTML += `await import('/assets/modules/${slotFile}');`;
+    if (fs.existsSync(slotPath)) {
+        hydartionScript.innerHTML += `await import('/assets/modules/${slotFile}');`;
+    }
 
     for (const { type , data } of process.staticTemplate){
         if(type==='csr') handleCSR(dom.window.document, data);

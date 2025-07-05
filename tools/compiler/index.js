@@ -108,7 +108,7 @@ function renameFile(filepath, name) {
   if(filepath.indexOf(srcPath)>-1) {
     filename = filepath.replace(srcPath,'');
     if(filename.startsWith('/pages')) {
-      filename = filename.replace('/pages','').slice(0,-6).replace('/','').replaceAll('/','-').replaceAll('{','-').replaceAll('}','-');
+      filename = filename.replace('/pages','').slice(0,-6).replace('/','').replaceAll('/','-').replaceAll('[','-').replaceAll(']','-');
       isPage = true;
       return [filename+'.js',isPage];
     }
