@@ -57,7 +57,7 @@ function shimDom(dom) {
 function resolveHtml(dom,resolve) {
 
     const route = dom.window.location.pathname;
-    const {file, depends} = process.sourceMap[route];
+    const { file } = process.sourceMap[route];
 
     let hydartionScript = dom.window.document.head.querySelector("script[type='hydration']");
     if(!hydartionScript){
@@ -69,13 +69,9 @@ function resolveHtml(dom,resolve) {
     hydartionScript.innerHTML += `await import('/assets/modules/${file}');`;
 
     let urlChunks = route.replace('/','').split('/');
-    const slotFile = `p_${urlChunks[0].replaceAll('[','--').replaceAll(']','--')}_${process.seed}_s_.js`;
+    const slotFile = `${urlChunks[0].replaceAll('[','-').replaceAll(']','-')}-_.js`;
     const slotPath = path.join(modulesPath,slotFile);
     if (fs.existsSync(slotPath)) hydartionScript.innerHTML += `await import('/assets/modules/${slotFile}');`;
-
-    depends.forEach(component=>{
-        if (fs.existsSync(path.join(modulesPath,component))) hydartionScript.innerHTML += `await import('/assets/modules/${component}');`;
-    });
 
     for (const { type , data } of process.staticTemplate){
         if(type==='csr') handleCSR(dom.window.document, data);

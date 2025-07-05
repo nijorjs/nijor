@@ -10,6 +10,7 @@ import compiler from './plugin/index.js';
 import { ModifyCSS } from './plugin/style.js';
 import { minifyCSS } from '../../utils/minify.js';
 import { getRoute } from '../../utils/getRoute.js';
+import uniqeid from '../../utils/uniqeid.js';
 import { treeshake as treeshake_style } from './plugin/css-treeshake.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -101,56 +102,33 @@ export async function Compile(options) {
   await fs.promises.appendFile(compilerOptions.styleSheet, minifiedStyle);
 }
 
-function renameFile(filename, seed) {
-  let prefix = "";
-  let typeModule = "unkown";
-  if(filename.indexOf(__dirname)>-1) {
-    let output = filename.replace(path.join(__dirname,'runtime'),'');
-    output = output.split('/').join('');
-    return [output, typeModule];
+function renameFile(filepath, name) {
+  let filename = "";
+  let isPage = false;
+  if(filepath.indexOf(srcPath)>-1) {
+    filename = filepath.replace(srcPath,'');
+    if(filename.startsWith('/pages')) {
+      filename = filename.replace('/pages','').slice(0,-6).replace('/','').replaceAll('/','-').replaceAll('{','-').replaceAll('}','-');
+      isPage = true;
+      return [filename+'.js',isPage];
+    }
+
   }
-
-  filename = filename.replace(RootPath, '');
-
-  if(filename.startsWith('/node_modules')){
-    let output = filename.replace('node_modules','').split('/').join('').replaceAll('.','')+'.js';
-    return [output,typeModule];
-  }
-
-  filename = filename.replace('/src','');
-  if (filename.endsWith('.nijor')) filename = filename.slice(0, -6);
-  let chunks = filename.split('/');
-  chunks.reverse().pop();
-  chunks.reverse();
-  if (chunks[0] === "pages") { prefix = 'p_'; typeModule = "page"; }
-  if (chunks[0] === "components") { prefix = 'c_'; typeModule = "component"; }
-  chunks.reverse().pop();
-  if (chunks[0] === '_') chunks[0] = 's_';
-  chunks.reverse();
-  let output = prefix + chunks.join('_' + seed + '_').replaceAll('[','--').replaceAll(']','--');
-  if(!output.endsWith('.js')) output = output+'.js';
-  return [output, typeModule];
+  filename = name + '-' + uniqeid(3,5) + '.js';
+  return [filename,isPage];
 }
 
 function chunkFileNames(file) {
   const filename = file.moduleIds.reverse()[0];
-  const [outputFileName, typeModule] = renameFile(filename, process.seed);
+  const [outputFileName, isPage] = renameFile(filename, file.name);
 
-  if (typeModule === "page") {
+  if (isPage) {
 
     const route = getRoute(filename);
     if (route.endsWith('/_')) return outputFileName;
 
-    let $imports = [];
-
-    file.moduleIds.reverse().pop();
-    file.moduleIds.forEach(f => {
-      $imports.push(renameFile(f, process.seed)[0]);
-    });
-
     process.sourceMap[route] = {
-      file: outputFileName,
-      depends: $imports
+      file: outputFileName
     };
   }
 
