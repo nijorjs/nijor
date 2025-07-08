@@ -56,7 +56,7 @@ export async function ModifyCSS(css,scope){
 export async function WriteStyleSheet(doc,scope,options){
 
     doc.window.document.querySelectorAll('n-style').forEach(async styleTag=>{
-        let mode = styleTag.getAttribute('mode');
+        let mode = styleTag.getAttribute('theme');
         let CSS = await ModifyCSS(styleTag.innerHTML,scope);
         if(mode==="normal"){
             await appendFile(options.styleSheet,CSS);
