@@ -56,12 +56,12 @@ export async function ModifyCSS(css,scope){
 export async function WriteStyleSheet(doc,scope,options){
 
     doc.window.document.querySelectorAll('n-style').forEach(async styleTag=>{
-        let mode = styleTag.getAttribute('theme');
+        let theme = styleTag.getAttribute('theme');
         let CSS = await ModifyCSS(styleTag.innerHTML,scope);
-        if(mode==="normal"){
+        if(theme==="normal"){
             await appendFile(options.styleSheet,CSS);
         }else{
-            await appendFile(options.styleSheet,await ModifyCSS(`body[theme="${mode}"]{${CSS}}`));
+            await appendFile(options.styleSheet,await ModifyCSS(`body[theme="${theme}"]{${CSS}}`));
         }
     });
 }

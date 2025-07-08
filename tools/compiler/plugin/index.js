@@ -34,7 +34,7 @@ export default options => {
                 // Handle Different Color Modes ::Start
                 try {
                     document.querySelectorAll('n-style').forEach(child => {
-                        if (!(child.hasAttribute('mode'))) child.setAttribute('mode', 'normal');
+                        if (!(child.hasAttribute('theme'))) child.setAttribute('theme', 'normal');
                     });
                 } catch (error) { }
                 // Handle Different Color Modes ::End
