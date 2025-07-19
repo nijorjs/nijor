@@ -1,7 +1,6 @@
 import GenerateID from '../../../utils/uniqeid.js';
 import { minifyHTML } from '../../../utils/minify.js';
 import { runComponents } from './sandbox.js';
-import { document } from 'postcss';
 
 function getAttributesFromProps(props) {
     // Remove curly braces or square brackets and split by comma

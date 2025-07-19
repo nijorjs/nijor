@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import createProject from '../src/create.js';
 import buildProject from '../src/build.js';
 import compileProject from '../src/compile.js';
-import serveProject from '../src/serve.js';
+import devServer from '../src/dev-server.js';
 
 const cwDir = process.cwd();
 const __dirname = path.join(path.dirname(fileURLToPath(import.meta.url)),'../'); // The root level of nijor
@@ -24,8 +24,8 @@ const commandsMap = {
     "create": () => createProject(cwDir,__dirname,userArgs[1]),
     "build": ()=> buildProject(__dirname),
     "compile": ()=> compileProject(userArgs[1]),
-    "serve": ()=> serveProject(),
-    "-v": ()=> console.log('v5.1.8'),
+    "dev": ()=> devServer(),
+    "-v": ()=> console.log('v5.1.9'),
     "default": ()=> DefaultCommand()
 }
 
@@ -37,7 +37,7 @@ function DefaultCommand(){
     console.log(`   ${highlight('create',[255,251,14])} : For creating a new project`);
     console.log(`   ${highlight('compile',[255,251,14])} : For compiling a project in dev mode`);
     console.log(`   ${highlight('build',[255,251,14])} : For building a project in production mode`);
-    console.log(`   ${highlight('serve',[255,251,14])} : For starting the dev server`);
+    console.log(`   ${highlight('dev',[255,251,14])} : For starting the dev server`);
     console.log(`   ${highlight('-v',[255,251,14])} : To check version \n`);
     console.log(`For more information, check docs at ${highlight('https://nijorjs.github.io',[0,195,255])}`);
 }

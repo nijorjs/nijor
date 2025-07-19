@@ -30,17 +30,17 @@ function getAttributesFromProps(props) {
 }
 
 function extractTemplateWords(str, omit = []) {
-    const regex = /\${(.*?)}/g;
-    let matches = [];
+    const regex = /\${([^}\[.]*?)(?:\[.*?\]|\.[^}]*)?}/g;
+    let matches = new Set();
     let match;
 
     while ((match = regex.exec(str)) !== null) {
         if (!omit.includes(match[1])) {
-            matches.push(match[1]);
+            matches.add(match[1]);
         }
     }
 
-    return `{${matches.join(", ")}}`;
+    return `{${[...matches].join(", ")}}`;
 }
 
 export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, filename) {
@@ -53,29 +53,13 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
         const $run_inside = runComponents(element,scope)[0];
 
         const id = scope + GenerateID(3, 4);
-        element.setAttribute('id', id);
+        const className = 'f'+id.toLowerCase();
+        element.classList.add(className);
         element.removeAttribute('n:for');
         element.setAttribute('n-for', fnName);
         element.innerHTML = '';
 
         const argumentsForFunction = extractTemplateWords(innerContent, [variable]);
-
-        let fn = `
-            window.eventStorage['${fnName}'] = async function (${argumentsForFunction}){
-                const div${scope} = document.getElementById('${id}');
-                try{
-                    for(let ${variable} of ${source}){
-                        div${scope}.innerHTML += \`${minifyHTML(innerContent)}\`;
-                        ${$run_inside}
-                    }
-                }catch($err${scope}){
-                    div${scope}.innerHTML += "An Error occured !";
-                }
-            }
-        `;
-
-        jsCode += fn;
-        element.setAttribute('nfor-arguments',`${argumentsForFunction}`);
 
         let getAttributes_reload = ``;
         getAttributesFromProps(argumentsForFunction).forEach(attr => {
@@ -84,37 +68,39 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
             getAttributes_reload += `let ${attr} = div${scope}.getAttribute("${attr}_") || "{${attr}}";`;
         });
 
-        let csrHydrationScript = `
-        ${getAttributes_reload==="" ? "" :`const div${scope} = document.getElementById('${id}');`}
-        ${getAttributes_reload}
-        await window.eventStorage['${fnName}'](${argumentsForFunction});
+        let fn = `
+            window.eventStorage['${fnName}'] = async function (){
+                document.querySelectorAll('.${className}').forEach(async div${scope}=>{
+                    if (div${scope}.classList.contains('exc-${className}')) return;
+                    try{
+                        ${getAttributes_reload}
+                        div${scope}.innerHTML = "";
+
+                        for(let ${variable} of ${source}){
+                            div${scope}.innerHTML += \`${minifyHTML(innerContent)}\`;
+                            ${$run_inside}
+                        }
+                        div${scope}.classList.add('exc-${className}');
+                    }catch($err${scope}){ div${scope}.innerHTML += "An Error occured !"; }
+                    
+                });
+            }
         `;
-        
+
+        jsCode += fn;
+
         if (element.hasAttribute('n:reload')) {
             const reloadId = element.getAttribute('n:reload');
             element.removeAttribute('n:reload');
             element.setAttribute(`onreload-${reloadId}`, `window.eventStorage['${reloadId}@reload']()`);
 
             jsCode += `window.eventStorage['${reloadId}@reload'] = async function() {
-                const div${scope} = document.getElementById('${id}');
-                ${getAttributes_reload}
-                div${scope}.innerHTML="";
-                await window.eventStorage['${fnName}'](${argumentsForFunction});
+                document.querySelectorAll('.${className}').forEach(div${scope}=>{ div${scope}.classList.remove('exc-${className}'); });
+                await window.eventStorage['${fnName}']();
             };`;
 
-            csrHydrationScript = `window.eventStorage['${reloadId}@reload']();`;
         }
 
-        if(!isInsideNData(VirtualDocument.window.document,element)){
-            process.staticTemplate.add({
-                type:'csr',
-                data:{
-                    id:id,
-                    content:'',
-                    script:csrHydrationScript
-                }
-            });
-        }
     });
 
 

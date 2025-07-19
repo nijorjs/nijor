@@ -60,7 +60,7 @@ export default async function (doc, scope, options, props, filename) {
     });
 
     // Checking if any component has n:server attribute
-    if(VirtualDocument.window.document.body.querySelectorAll('[n:async][n:server]').length!=0 && !isPage(filename)) process.quitProgram(`n:server attribute found inside a component in ${filename}\nn:server is used only inside pages ; not components`,[255,0,0]);
+    if(VirtualDocument.window.document.body.querySelectorAll('[n:fetch][n:server]').length!=0 && !isPage(filename)) console.print(`n:server attribute found inside a component in ${filename}\nn:server is used only inside pages ; not components`,[255,251,14]);
 
     // Compiling n:slot starts here
     VirtualDocument.window.document.body.querySelectorAll('[n:slot]').forEach(child => {
@@ -143,12 +143,7 @@ export default async function (doc, scope, options, props, filename) {
     VirtualDocument.window.document.body.querySelectorAll('[n-for]').forEach(element=>{
         const fnName = element.getAttribute('n-for');
         element.removeAttribute('n-for');
-        let argumentsForFunction = "";
-        if(element.hasAttribute('nfor-arguments')){
-            argumentsForFunction = element.getAttribute('nfor-arguments') || "";
-            element.removeAttribute('nfor-arguments');
-        }
-        DeferScripts+=`await window.eventStorage['${fnName}'](${argumentsForFunction});`;
+        DeferScripts+=`await window.eventStorage['${fnName}']();`;
     });
 
     template = VirtualDocument.window.document.body.innerHTML;
