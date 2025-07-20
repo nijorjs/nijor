@@ -1,4 +1,4 @@
-import { rollup } from 'rollup';
+import { rolldown } from 'rolldown';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import json from '@rollup/plugin-json';
 import terser from '@rollup/plugin-terser';
@@ -77,13 +77,13 @@ export async function Compile(options) {
   styleSheet = await ModifyCSS(styleSheet);
   await fs.promises.writeFile(compilerOptions.styleSheet, styleSheet);
 
-  const bundle = await rollup({
-    input: 'app',
+  const bundle = await rolldown({
+    input: 'main',
     plugins: [
       includepaths(includePathOptions),
       json(),
       nodeResolve(),
-      virtual({ app: `${await crawl(path.join(RootPath, 'src'))}` }),
+      virtual({ main: `${await crawl(path.join(RootPath, 'src'))}` }),
       image(),
       compiler(compilerOptions),
       options.minify && terser()
