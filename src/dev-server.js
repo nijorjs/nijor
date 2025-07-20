@@ -102,7 +102,7 @@ export default async function () {
         console.log(error);
     }
 
-    if (NijorJSON.server.live_reload) fs.watch(srcDir, { recursive: true }, async (eventType, filename) => {
+    fs.watch(srcDir, { recursive: true }, async (eventType, filename) => {
         if (eventType === 'change') {
             await recompile(eventEmitter);
             return;

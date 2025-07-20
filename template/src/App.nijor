@@ -1,7 +1,7 @@
 <header n:imported="components/header">
 <footer n:imported="components/footer">
-<template>
+<body>
     <header></header>
         <div n:slot style="margin-top: 5rem;"></div>
     <footer></footer>
-</template>
+</body>

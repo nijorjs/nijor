@@ -1,6 +1,6 @@
 {
   "name": "@nijor/nijor",
-  "version": "5.1.9",
+  "version": "5.2.0",
   "author": "Deb Axom",
   "main": "bin/cli.js",
   "bin": {
@@ -20,7 +20,8 @@
     "postcss-nested-props": "^2.0.0",
     "postcss-selector-parser": "^7.1.0",
     "postcss-variable-compress": "^3.0.0",
-    "rolldown": "^1.0.0-beta.23"
+    "rolldown": "^1.0.0-beta.23",
+    "rollup": "^4.45.1"
   },
   "description": "Unleash Your Web Wizardry !",
   "license": "ISC",

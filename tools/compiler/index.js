@@ -1,4 +1,4 @@
-import { rolldown } from 'rolldown';
+import { rollup } from 'rollup';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import json from '@rollup/plugin-json';
 import terser from '@rollup/plugin-terser';
@@ -67,7 +67,17 @@ export async function Compile(options) {
     styleSheet: path.join(RootPath, NijorJSON.styles.output)
   }
 
-  const bundle = await rolldown({
+  try {
+    await fs.promises.rm(path.join(RootPath, NijorJSON.module.output), { recursive: true, force: true }); // Delete the modules folder from assets
+  } catch (error) { }
+
+  if (!fs.existsSync(path.join(RootPath, 'assets'))) await fs.promises.mkdir(path.join(RootPath, 'assets'));
+
+  let styleSheet = await fs.promises.readFile(path.join(RootPath, NijorJSON.styles.input), 'utf-8');
+  styleSheet = await ModifyCSS(styleSheet);
+  await fs.promises.writeFile(compilerOptions.styleSheet, styleSheet);
+
+  const bundle = await rollup({
     input: 'app',
     plugins: [
       includepaths(includePathOptions),
@@ -81,21 +91,13 @@ export async function Compile(options) {
     onwarn: (msg) => { }
   });
 
-  try {
-    await fs.promises.rm(path.join(RootPath, NijorJSON.module.output), { recursive: true, force: true }); // Delete the modules folder from assets
-  } catch (error) { }
-
-  if (!fs.existsSync(path.join(RootPath, 'assets'))) await fs.promises.mkdir(path.join(RootPath, 'assets'));
-
-  let styleSheet = await fs.promises.readFile(path.join(RootPath, NijorJSON.styles.input), 'utf-8');
-  styleSheet = await ModifyCSS(styleSheet);
-  fs.promises.writeFile(compilerOptions.styleSheet, styleSheet);
-
   await bundle.write({
     dir: path.join(RootPath, NijorJSON.module.output),
     format: 'es',
     chunkFileNames : chunkFileNames
   });
+
+  await bundle.close();
 
   const styleModules = await loadStyleModules(path.join(RootPath, NijorJSON.styles.modules));
   const minifiedStyle = minifyCSS(treeshake_style(styleModules, process.cssClasses));
