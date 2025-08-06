@@ -84,6 +84,8 @@ const server = http.createServer(async (req, res) => {
     }
 });
 
+let watcher;
+
 export default async function () {
 
     if (!fs.existsSync(path.join(rootDir, 'nijor.config.json'))) process.quitProgram(`Can't find 'nijor.config.json' in ${rootDir}`, [255, 0, 0]);
@@ -102,12 +104,14 @@ export default async function () {
         console.log(error);
     }
 
-    fs.watch(srcDir, { recursive: true }, async (eventType, filename) => {
-        if (eventType === 'change') {
-            await recompile(eventEmitter);
-            return;
-        }
-    });
+    // fs.watch(srcDir, { recursive: true }, async (eventType, filename) => {
+    //     if (eventType === 'change') {
+    //         await recompile(eventEmitter);
+    //         return;
+    //     }
+    // });
+
+    startWatching(eventEmitter);
 
     eventEmitter.on('compiled', async _ => {
         wss.clients.forEach(client => {
@@ -128,4 +132,12 @@ async function recompile(eventEmitter) {
     } catch (error) {
         console.log(error);
     }
+}
+
+function startWatching(eventEmitter){
+    watcher = fs.watch(srcDir, { recursive: true }, async (eventType, filename) => {
+        await recompile(eventEmitter);
+        watcher.close();
+        startWatching(eventEmitter);
+    });
 }

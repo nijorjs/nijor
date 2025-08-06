@@ -1,8 +1,53 @@
 function removeComments(code) {
-  return code
-    .replace(/\/\/.*$/gm, '') // Remove single-line comments
-    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
-    .replace(/^\s*[\r\n]/gm, ''); // Remove empty lines
+  let result = '';
+  let inString = false;
+  let stringChar = '';
+  let inSingleLineComment = false;
+  let inMultiLineComment = false;
+  let escaped = false;
+
+  for (let i = 0; i < code.length; i++) {
+    const char = code[i];
+    const nextChar = code[i + 1];
+
+    if (inString) {
+      result += char;
+      if (!escaped && char === stringChar) {
+        inString = false;
+      }
+      escaped = char === '\\' && !escaped;
+    } else if (inSingleLineComment) {
+      if (char === '\n') {
+        inSingleLineComment = false;
+        result += '\n';
+      }
+    } else if (inMultiLineComment) {
+      if (char === '*' && nextChar === '/') {
+        inMultiLineComment = false;
+        i++; // Skip '/'
+      }
+    } else {
+      if ((char === '"' || char === "'" || char === '`')) {
+        inString = true;
+        stringChar = char;
+        result += char;
+      } else if (char === '/' && nextChar === '/') {
+        inSingleLineComment = true;
+        i++; // Skip nextChar
+      } else if (char === '/' && nextChar === '*') {
+        inMultiLineComment = true;
+        i++; // Skip nextChar
+      } else {
+        result += char;
+      }
+    }
+  }
+
+  // Remove empty lines (after comment removal)
+  return result
+    .split('\n')
+    .filter(line => line.trim() !== '')
+    .join('\n');
 }
 
 function $declaration(code,scope,reactive) {

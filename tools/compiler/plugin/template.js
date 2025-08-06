@@ -123,9 +123,10 @@ export default async function (doc, scope, options, props, filename) {
     // Compiling on:{event} ends here
 
     // Compiling switch-show starts here
-    let [v1,v2] = switchShow(VirtualDocument.window.document.body,JScode,scope,props);
+    let [v1,v2,v3] = switchShow(VirtualDocument.window.document.body,JScode,DeferScripts,scope,props);
     VirtualDocument.window.document.body.innerHTML = v1;
     JScode = v2;
+    DeferScripts = v3;
     // Compiling switch-show ends here
 
     // Running the imported nijor components

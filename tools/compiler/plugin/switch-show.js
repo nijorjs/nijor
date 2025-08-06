@@ -2,7 +2,7 @@ import GenerateId from '../../../utils/uniqeid.js';
 import { runComponents } from './sandbox.js';
 import { $reference } from './transpile.js';
 
-export default function (document, presecript, scope, props) {
+export default function (document, presecript, deferscript, scope, props) {
     let fncCode = ``;
     let $total_components = 0;
 
@@ -69,8 +69,8 @@ export default function (document, presecript, scope, props) {
 
         presecript += fncCode;
         presecript += `${$cvar}.subscribe(${$async}()=> ${$await} ${fncName}());`;
-
+        deferscript += `${$await} ${fncName}();`;
     });
 
-    return [document.innerHTML, presecript];
+    return [document.innerHTML, presecript, deferscript];
 }

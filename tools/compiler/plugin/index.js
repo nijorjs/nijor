@@ -4,6 +4,7 @@ import GenerateID from '../../../utils/uniqeid.js';
 import { replaceTags } from '../../../utils/replaceTags.js';
 import TemplateLoader from './template.js';
 import * as Scripts from './handleScripts.js' ;
+import { $reference } from './transpile.js';
 
 export default options => {
     let opts = { include: '**/*.nijor' };
@@ -25,7 +26,7 @@ export default options => {
                 try {
                     document.querySelectorAll('script').forEach(child => {
                         if (child.hasAttribute('defer')) child.setAttribute('execute', 'post');
-                        if (child.hasAttribute('mid')) child.setAttribute('execute', 'mid');
+                        if (child.hasAttribute('pre-render')) child.setAttribute('execute', 'mid');
                         if (child.getAttribute('execute') === "post" || child.getAttribute('execute') === "mid") return;
                         child.setAttribute('execute', 'pre');
                     });
@@ -41,7 +42,7 @@ export default options => {
 
                 const scope = GenerateID(4, 6).toLowerCase();
                 const importStatements = Scripts.ReturnScripts(VirtualDocument,'pre',scope,process.seed).ImportStatements;
-                const midScript = Scripts.ReturnScripts(VirtualDocument,'mid').script;
+                const midScript = $reference(Scripts.ReturnScripts(VirtualDocument,'mid').script,scope);
                 const ImportComponents = Scripts.ReturnModule(VirtualDocument,scope);
                 const { template, JScode, DeferScripts } = await TemplateLoader(VirtualDocument,scope,options,props,filename);
                 return {
