@@ -9,7 +9,7 @@ import path from 'path';
 async function bundleJs(RootPath) {
     try {
         const bundle = await rolldown({
-            input: path.join(RootPath, 'assets/modules/app.js'),
+            input: path.join(RootPath, 'assets/modules/main.js'),
             plugins: []
         });
         const { output } = await bundle.generate({

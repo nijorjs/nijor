@@ -50,7 +50,7 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
         let innerContent = element.innerHTML;
 
         const fnName = `f${scope}${GenerateID(3, 4)}`;
-        const $run_inside = runComponents(element,scope)[0];
+        const $run_inside = runComponents(element,scope);
 
         const id = scope + GenerateID(3, 4);
         const className = 'f'+id.toLowerCase();

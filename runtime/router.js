@@ -81,15 +81,12 @@ window.nijor.setRoute = function (urlData, DynamicComponent, parentURL) {
             let { default: Page } = await DynamicComponent();
             let routesDiv = document.getElementById(`routes-slot-${parentURL}`);
 
-            if (routesDiv) {
-                routesDiv.innerHTML = "<app></app>";
-            } else {
+            if (!routesDiv) {
                 await Slots.get(`${parentURL}`)(params);
-                document.getElementById(`routes-slot-${parentURL}`).innerHTML = "<app></app>";
             }
-            Page.init('app');
-            await Page.run(params);
-        } catch (e) { }
+
+            await Page.render(`routes-slot-${parentURL}`,params);
+        } catch (e) {}
 
     });
 
@@ -99,10 +96,7 @@ window.nijor.addSlot = function(url,DynamicComponent){
     Slots.set(url,async(params)=>{
         try{
             let { default: Page} = await DynamicComponent();
-            let routesDiv = document.getElementById('routes-slot-/');
-            if(routesDiv) routesDiv.innerHTML="<app></app>";
-            Page.init('app');
-            await Page.run(params);
+            await Page.render('routes-slot-/',params);
         }catch(e){} 
     });
 }

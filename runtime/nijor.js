@@ -39,15 +39,15 @@ function RenderScript(){
 export async function Render(App,app='app'){
     if(!window.nijor.renderRoute){ 
         // If Router is not used.
-        App.init(app);
-        await App.run();
+        await App.run(app);
         return;
     }
+    
     if(document.body.getElementsByTagName(app).length===0){
         RenderScript();
         return;
     }
-    App.init(app);
-    await App.run();
+
+    await App.run(app);
     await window.nijor.renderRoute(window.location.pathname);
 }

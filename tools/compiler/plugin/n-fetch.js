@@ -24,9 +24,9 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
         let errVar = fallbackBlock.getAttribute('catch') || `${scope}error`;
         let funcName = `${asyncFunc.split('(')[0]}_${scope}`;
 
-        let RunComponentWithinSuccess = runComponents(successBlock, scope)[0];
-        let RunComponentWithinFallback = runComponents(fallbackBlock, scope)[0];
-        let RunComponentWithinLoading = runComponents(loadingBlock, scope)[0];
+        let RunComponentWithinSuccess = runComponents(successBlock, scope);
+        let RunComponentWithinFallback = runComponents(fallbackBlock, scope);
+        let RunComponentWithinLoading = runComponents(loadingBlock, scope);
 
         if(successBlock.hasAttribute('loop') && !loopBlock){
             jsCode+=`

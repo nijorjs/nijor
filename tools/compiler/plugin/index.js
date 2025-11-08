@@ -2,6 +2,7 @@ import createFilter from './createFilter.js';
 import { JSDOM } from 'jsdom';
 import GenerateID from '../../../utils/uniqeid.js';
 import { replaceTags } from '../../../utils/replaceTags.js';
+import { isPage } from '../../../utils/isPage.js';
 import TemplateLoader from './template.js';
 import * as Scripts from './handleScripts.js' ;
 import { $reference } from './transpile.js';
@@ -13,7 +14,6 @@ export default options => {
 
         name: "compiler",
         async transform(code, filename) {
-            let componentName = filename.replace('/', '\\').split('\\').reverse();
 
             if (filter(filename)) {
                 let newCode = replaceTags(code,'style','n-style');
@@ -47,7 +47,8 @@ export default options => {
                 const { template, JScode, DeferScripts } = await TemplateLoader(VirtualDocument,scope,options,props,filename);
                 return {
                     code: `
-                    import component_${process.seed} from 'nijor/component';
+                    
+                    import component_${process.seed} from 'nijor/${isPage(filename) ? "page" : "component"}';
                     ${ImportComponents}
                     ${importStatements}
                     ${JScode}
@@ -60,10 +61,7 @@ export default options => {
                     `,
                     map: { mappings: "" }
                 };
-
             }
-
         }
-
     };
 }

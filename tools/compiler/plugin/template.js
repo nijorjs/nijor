@@ -6,9 +6,10 @@ import Compile_nfor from './n-for.js';
 import FetchLoader from './n-fetch.js';
 import { minifyHTML } from '../../../utils/minify.js';
 import { replaceTags } from '../../../utils/replaceTags.js';
+import { isPage } from '../../../utils/isPage.js';
+import { compressArray } from '../../../utils/compress-array.js';
 import Reactivity from './reactivity.js';
 import switchShow from './switch-show.js';
-import path from 'path';
 
 function CompileRouteAttribute(VirtualDocument) {
     VirtualDocument.window.document.body.querySelectorAll('a[n:route]').forEach(child => {
@@ -130,14 +131,10 @@ export default async function (doc, scope, options, props, filename) {
     // Compiling switch-show ends here
 
     // Running the imported nijor components
-
     let allComponents = [];
-    let nijorComponents = [...VirtualDocument.window.document.body.querySelectorAll('*')].filter(el => (new RegExp(`\\w+_${scope}`)).test(el.tagName.toLowerCase()));
-    nijorComponents.forEach(component => {
-        const componentName = component.tagName.toLowerCase();
-        if(allComponents.includes(componentName)) return;
-        allComponents.push(componentName);
-        DeferScripts=`$${componentName}.init('${componentName}');await $${componentName}.run();`+DeferScripts;
+    [...VirtualDocument.window.document.body.querySelectorAll('*')].filter(el => (new RegExp(`\\w+_${scope}`)).test(el.tagName.toLowerCase())).reverse().forEach(component => allComponents.push(component.tagName.toLowerCase()) );
+    compressArray(allComponents).forEach(([name,count])=>{
+        DeferScripts=`await $${name}.run('${name}',${count});`+DeferScripts;
     });
 
     // Executing the for loops
@@ -172,12 +169,4 @@ function getRouteFromFilePath(filepath) {
     });
 
     return parentURL;
-}
-
-function isPage(filename){
-    const RootPath = process.cwd();
-    const srcPath = path.join(RootPath, 'src');
-    filename = filename.replace(srcPath,'');
-    if(filename.startsWith('/pages/')) return true;
-    return false;
 }

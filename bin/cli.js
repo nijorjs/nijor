@@ -25,7 +25,7 @@ const commandsMap = {
     "build": ()=> buildProject(__dirname),
     "compile": ()=> compileProject(userArgs[1]),
     "dev": ()=> devServer(),
-    "-v": ()=> console.log('v5.2.4'),
+    "-v": ()=> console.log('v5.2.5'),
     "default": ()=> DefaultCommand()
 }
 
