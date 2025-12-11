@@ -8,3 +8,16 @@ export function runComponents(element, scope) {
     compressArray(components).forEach(([name,count])=> runFn += `await $${name}.run('${name}',${count});` );
     return runFn;
 }
+
+export function getComponents(element, scope){
+    let runFn = '';
+    const regex = new RegExp(`\\w+_${scope}`);
+    let components = [];
+    [...element.querySelectorAll('*')].filter(el => regex.test(el.tagName.toLowerCase())).reverse().forEach(component => {
+        let name = component.tagName.toLowerCase();
+        if(components.includes(name)) return;
+        components.push(name);
+    });
+
+    return components;
+}

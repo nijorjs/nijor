@@ -1,6 +1,6 @@
 import GenerateID from '../../../utils/uniqeid.js';
 import { minifyHTML } from '../../../utils/minify.js';
-import { runComponents } from './sandbox.js';
+import { runComponents, getComponents } from './sandbox.js';
 
 function parseCondition(condition, filename) {
     const regex = /(\w+)\s+in\s+(.*)/;
@@ -50,8 +50,10 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
         let innerContent = element.innerHTML;
 
         const fnName = `f${scope}${GenerateID(3, 4)}`;
-        const $run_inside = runComponents(element,scope);
-
+        let $run_inside = ``;
+        getComponents(element,scope).forEach(component=>{
+            $run_inside += `await $${component}.run('${component}',${source}.length);`
+        });
         const id = scope + GenerateID(3, 4);
         const className = 'f'+id.toLowerCase();
         element.classList.add(className);
@@ -78,8 +80,9 @@ export default function (VirtualDocument, jsCode, jsCodeDefer, scope, props, fil
 
                         for(let ${variable} of ${source}){
                             div${scope}.innerHTML += \`${minifyHTML(innerContent)}\`;
-                            ${$run_inside}
                         }
+                        
+                        ${$run_inside}
                         div${scope}.classList.add('exc-${className}');
                     }catch($err${scope}){ div${scope}.innerHTML += "An Error occured !"; }
                     
