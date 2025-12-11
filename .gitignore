@@ -3,3 +3,4 @@ template/assets/*
 template/build/*
 test
 publish.sh
+.npmrc
