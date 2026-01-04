@@ -9,7 +9,7 @@ const publicDir = path.join(__dirname,'assets');
 const pagesDir = path.join(__dirname,'pages');
 
 const mimeTypes = {
-  '.html': 'text/html',
+  '.html': 'text/html;charset=utf-8',
   '.css': 'text/css',
   '.js': 'text/javascript',
   '.json': 'application/json',
@@ -47,7 +47,7 @@ const server = http.createServer(async (req, res) => {
     if(req.url.startsWith("/assets")){
         let ext = path.extname(req.url);
         try {
-            let data = await fs.promises.readFile(publicDir + req.url.replace('/assets', ''), 'utf-8');
+            let data = await fs.promises.readFile(publicDir + req.url.replace('/assets', ''));
             res.setHeader('Content-Type', mimeTypes[ext] || 'text/plain');
             res.writeHead(200, headers);
             res.end(data);

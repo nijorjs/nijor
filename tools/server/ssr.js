@@ -10,7 +10,7 @@ const pagesDir_/*--seed--*/ = path_/*--seed--*/.join(__dirname_/*--seed--*/,'pag
 const PORT_/*--seed--*/ = 3000;
 
 const mimeTypes_/*--seed--*/ = {
-  '.html': 'text/html',
+  '.html': 'text/html;charset=utf-8',
   '.css': 'text/css',
   '.js': 'text/javascript',
   '.json': 'application/json',
@@ -104,7 +104,7 @@ const server_/*--seed--*/ = createServer_/*--seed--*/(async (req, res) => {
         if(filePath.startsWith("/assets")){
             const ext = path_/*--seed--*/.extname(filePath);
             try {
-                const content = await fs_/*--seed--*/.promises.readFile(assetsDir_/*--seed--*/ + filePath.replace('/assets', ''), 'utf-8');
+                const content = await fs_/*--seed--*/.promises.readFile(assetsDir_/*--seed--*/ + filePath.replace('/assets', ''));
                 const mimeType = mimeTypes_/*--seed--*/[ext] || 'application/octet-stream';
                 res.writeHead(200, {
                     'content-Type': mimeType,

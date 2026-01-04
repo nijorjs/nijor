@@ -1,3 +1,4 @@
+// ['hello', 'hi', 'ok', 'hi', 'no'] -> [['hello',1], ['hi',2], ['ok',1], ['no',1]]
 export function compressArray(arr) {
   if (arr.length === 0) return [];
 

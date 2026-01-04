@@ -71,7 +71,7 @@ const server = http.createServer(async (req, res) => {
         return;
     }
     try {
-        let data = await fs.promises.readFile(rootDir + req.url, 'utf-8');
+        let data = await fs.promises.readFile(rootDir + req.url);
         let ext = path.extname(req.url);
         res.setHeader('Content-Type', mimeTypes[ext] || 'text/plain');
         res.writeHead(200, headers);

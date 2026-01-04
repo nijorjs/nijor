@@ -4,12 +4,13 @@ import { ReturnScripts } from './handleScripts.js';
 import CompileOnEventAttribute from './on-event.js';
 import Compile_nfor from './n-for.js';
 import FetchLoader from './n-fetch.js';
+import Reactivity from './reactivity.js';
+import switchShow from './switch-show.js';
+import { rename_class } from './nst.js';
 import { minifyHTML } from '../../../utils/minify.js';
 import { replaceTags } from '../../../utils/replaceTags.js';
 import { isPage } from '../../../utils/isPage.js';
 import { compressArray } from '../../../utils/compress-array.js';
-import Reactivity from './reactivity.js';
-import switchShow from './switch-show.js';
 
 function CompileRouteAttribute(VirtualDocument) {
     VirtualDocument.window.document.body.querySelectorAll('a[n:route]').forEach(child => {
@@ -82,12 +83,13 @@ export default async function (doc, scope, options, props, filename) {
 
     // Handling n:style starts here
     VirtualDocument.window.document.body.querySelectorAll('[n:style]').forEach(el=>{
-        let classes = el.getAttribute('n:style').replace(/\s+/g, ' ').trim().split(" ");
+        let classes = getStyles(el.getAttribute('n:style'));
         el.removeAttribute('n:style');
-        classes.forEach(cssClass=>{
-            process.cssClasses.add(cssClass);
-            el.classList.add(cssClass.replace(/(\w+):(\w+)/, '._$1-$2'));
-        })
+        classes.forEach(c=>{
+            c = c.replace(/\s/g, '');
+            process.cssClasses.add(c);
+            el.classList.add(rename_class(c));
+        });
     });
     // Handling n:style ends here
 
@@ -147,6 +149,30 @@ export default async function (doc, scope, options, props, filename) {
     template = VirtualDocument.window.document.body.innerHTML;
     template = minifyHTML(template);
     return {template,JScode,DeferScripts};
+}
+
+function getStyles(input) {
+  const result = [];
+  let current = '';
+  let depth = 0;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+
+    if (char === '(') depth++;
+    if (char === ')') depth--;
+
+    // split only on spaces outside parentheses
+    if (char === ' ' && depth === 0) {
+      if (current.trim()) result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  if (current.trim()) result.push(current.trim());
+  return result;
 }
 
 function getRouteFromFilePath(filepath) {

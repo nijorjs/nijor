@@ -11,7 +11,7 @@ import { ModifyCSS } from './plugin/style.js';
 import { minifyCSS } from '../../utils/minify.js';
 import { getRoute } from '../../utils/getRoute.js';
 import uniqeid from '../../utils/uniqeid.js';
-import { treeshake as treeshake_style } from './plugin/css-treeshake.js';
+import { compile_nst } from './plugin/nst.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -41,23 +41,6 @@ const includePathOptions = {
   external: [],
   extensions: ['.js', '.nijor', 'json']
 };
-
-async function loadStyleModules(dirPath) {
-  if (!fs.existsSync(dirPath)) await fs.promises.mkdir(dirPath);
-  try {
-    const files = await fs.promises.readdir(dirPath);
-    const fileContents = await Promise.all(
-      files.map(async (file) => {
-        const filePath = path.join(dirPath, file);
-        return fs.promises.readFile(filePath, 'utf-8');
-      })
-    );
-    return fileContents.join('\n');
-  } catch (error) {
-    console.error('Error reading files:', error);
-    return '';
-  }
-}
 
 export async function Compile(options) {
 
@@ -99,9 +82,7 @@ export async function Compile(options) {
   });
 
   await bundle.close();
-
-  const styleModules = await loadStyleModules(path.join(RootPath, NijorJSON.styles.modules));
-  const minifiedStyle = minifyCSS(treeshake_style(styleModules, process.cssClasses));
+  const minifiedStyle = minifyCSS(compile_nst(path.join(RootPath, NijorJSON.styles.modules), process.cssClasses));
   await fs.promises.appendFile(compilerOptions.styleSheet, minifiedStyle);
 }
 
