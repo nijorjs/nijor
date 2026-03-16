@@ -1,0 +1,38 @@
+<head>
+    <title>Nijor</title>
+</head>
+<body>
+    <div class="main">
+        <img src="/images/logo.svg">
+        <p>
+            <span style="font-size: 35px; font-weight: bold;">Nijor</span>
+            <span class="tagline"> : Unleash Your Web Wizardry !</span>
+        </p>
+        <a n:route="/welcome"><button>Get Started</button></a>
+    </div>
+</body>
+<style>
+    .main{
+        padding: 2rem;
+        display: flex;
+        flex-direction:column;
+        align-items: center;
+    }
+    .main button{
+        margin: 2rem;
+        background-color: #0099ff;
+        color:white;
+        padding: 1rem 2rem;
+        border:none;
+        font-size: 1.8rem;
+        letter-spacing: 1.5px;
+    }
+    .main button:hover{
+        background-color: #00ccff;
+    }
+    .tagline{
+        font-size: 40px;
+        font-weight: bold;
+        color: #008be8;
+    }
+</style>

@@ -1,0 +1,7 @@
+<import name="header" source="@/components/header.nijor">
+<import name="footer" source="@/components/footer.nijor">
+<body>
+    <header></header>
+        <div n:slot style="margin-top: 5rem;"></div>
+    <footer></footer>
+</body>
