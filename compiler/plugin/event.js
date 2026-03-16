@@ -229,8 +229,11 @@ export default function ({ document, scope, scripts }) {
         });
     });
 
-    return {
+    return ({
+        name: "Event Handler",
+        data:{
         body: document.body.innerHTML,
         ...scripts
-    };
+        }
+    });
 }

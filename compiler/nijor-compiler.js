@@ -182,7 +182,7 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
     });
 
     for await (const plugin of plugins) {
-        const data = await plugin({ document, scope, props, scripts, filename, module_type });
+        const {name, data } = await plugin({ document, scope, props, scripts, filename, module_type });
         try {
             document.body.innerHTML = data.body;
             scripts.import = data.import;
@@ -190,7 +190,7 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             scripts.main = data.main;
             scripts.defer = data.defer;
         } catch (error) {
-            console.log(error);
+            console.error(`Plugin[${name}] : ${error}`);
         }
     }
 

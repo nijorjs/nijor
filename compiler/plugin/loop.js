@@ -115,7 +115,10 @@ export function loop({ document, scope, scripts, module_type }) {
     });
 
     return ({
+        name: "Loop",
+        data:{
         body: document.body.innerHTML,
         ...scripts
+        }
     });
 }

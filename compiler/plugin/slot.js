@@ -9,7 +9,10 @@ export default function ({document, scripts, filename}) {
     });
 
     return ({
+        name: "Slot",
+        data:{
         body: document.body.innerHTML,
         ...scripts
+        }
     });
 }

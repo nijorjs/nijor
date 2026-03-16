@@ -147,7 +147,10 @@ export function reactive({ document, scope, scripts, module_type }) {
   });
 
   return ({
-    body: document.body.innerHTML,
-    ...scripts
+    name: "Reactivity",
+    data:{
+      body: document.body.innerHTML,
+      ...scripts
+    }
   });
 }
