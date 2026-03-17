@@ -1,5 +1,6 @@
 node_modules
-template/assets/*
+template/assets/modules/*
+template/assets/style.css
 template/build/*
 test
 publish.sh
