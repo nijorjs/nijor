@@ -4,6 +4,10 @@
 *Nijor : A modern & modular web framework !* <br>
 See [Docs](https://nijorjs.github.io).
 
-#### Author: [DebAxom](https://github.com/debaxom)
-#### Email: debaxom@gmail.com
+## License
+MIT © 2026 Deb Axom
+
+## Author:
+### Profile : [DebAxom](https://github.com/debaxom)
+### Email : debaxom@gmail.com
 #### (Guwahati,Assam)
