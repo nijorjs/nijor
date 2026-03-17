@@ -25,15 +25,19 @@ export default class {
     }
 
     async run(name, num = 1) {
-        for (let index = 0; index < num; index++) {
-            const component = document.getElementsByTagName(name)[0];
-            if (!component) break;
+        const elements = Array.from(document.getElementsByTagName(name)).slice(0, num);
+
+        await Promise.all(elements.map(async (component) => {
             const $ = state({});
             const props = getAttributes(component);
-            const template = await this.template(props,props._id,$);
+
+            const template = await this.template(props, props._id, $);
+            if (!template) return;
+
             const fragment = range.createContextualFragment(template);
             component.replaceWith(fragment);
+
             await this.cb(props, props._id, $);
-        }
+        }));
     }
 }

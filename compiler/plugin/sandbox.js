@@ -1,29 +1,42 @@
 import { compressArray } from '../../utils/compress-array.js';
 
 export function runComponents(element, scope) {
-    let runFn = '';
     const regex = new RegExp(`\\w+_${scope}`);
     let components = [];
-    [...element.querySelectorAll('*')].filter(el => regex.test(el.tagName.toLowerCase())).reverse().forEach(component => components.push(component.tagName.toLowerCase()));
-    compressArray(components).forEach(([name, count]) => runFn += `await $${name.replaceAll('-','')}.run('${name}',${count});`);
-    return runFn;
+
+    [...element.querySelectorAll('*')]
+        .filter(el => regex.test(el.tagName.toLowerCase()))
+        .reverse()
+        .forEach(component => components.push(component.tagName.toLowerCase()));
+
+    const calls = compressArray(components).map(([name, count]) => {
+        return `$${name.replaceAll('-','')}.run('${name}',${count})`;
+    });
+
+    if (!calls.length) return '';
+
+    return `await Promise.all([${calls.join(',')}]);`;
 }
 
 export function runComponentsCount(element, scope) {
     const regex = new RegExp(`\\w+_${scope}`);
     let components = [];
 
-    [...element.querySelectorAll("*")].filter((el) => regex.test(el.tagName.toLowerCase())).reverse().forEach((component) => components.push(component.tagName.toLowerCase()));
+    [...element.querySelectorAll("*")]
+        .filter(el => regex.test(el.tagName.toLowerCase()))
+        .reverse()
+        .forEach(component => components.push(component.tagName.toLowerCase()));
 
     const compressed = compressArray(components);
 
-    // return a function that takes count
     return function (count) {
-        let runFn = "";
-        compressed.forEach(([name]) => {
-            runFn += `await $${name.replaceAll('-','')}.run('${name}',${count});`;
+        const calls = compressed.map(([name]) => {
+            return `$${name.replaceAll('-','')}.run('${name}',${count})`;
         });
-        return runFn;
+
+        if (!calls.length) return '';
+
+        return `await Promise.all([${calls.join(',')}]);`;
     };
 }
 

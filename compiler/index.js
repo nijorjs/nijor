@@ -38,14 +38,14 @@ export async function Compile(options) {
       alias: {
         '@': srcPath,
         'nijor': path.join(__dirname, 'runtime'),
-
       }
     },
     plugins: [
       virtual({ main: `${await crawl(path.join(RootPath, 'src'))}` }),
       image(),
       compiler({ root : RootPath, stylesheetPath })
-    ]
+    ],
+    onLog : msg => {}
   });
 
   await bundle.write({

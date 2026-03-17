@@ -196,13 +196,20 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
 
     // Running all the visible components
     const regex = new RegExp(`\\w+_${scope}`);
-    const allComponents = [...document.body.querySelectorAll('*')].filter(el => regex.test(el.tagName.toLowerCase()) && !el.closest('[n:loop]')).map(el => el.tagName.toLowerCase()).reverse();
+    const allComponents = [...document.body.querySelectorAll('*')]
+        .filter(el => regex.test(el.tagName.toLowerCase()) && !el.closest('[n:loop]'))
+        .map(el => el.tagName.toLowerCase())
+        .reverse();
 
     document.body.querySelectorAll("[n:loop]").forEach(l => l.removeAttribute('n:loop'));
 
-    compressArray(allComponents).forEach(([name, count]) => {
-        scripts.defer = `await $${name.replaceAll('-','')}.run('${name}',${count});` + scripts.defer;
+    const calls = compressArray(allComponents).map(([name, count]) => {
+        return `$${name.replaceAll('-','')}.run('${name}',${count})`;
     });
+
+    if (calls.length) {
+        scripts.defer = `await Promise.all([${calls.join(',')}]);\n` + scripts.defer;
+    }
 
     const imports = [...scripts.import].join('\n');
 
