@@ -127,7 +127,7 @@ export default options => {
                     components: $components,
                     global: "",
                     main: compileReactive($script),
-                    defer: virtual_doc.window.document.querySelector('script[defer]').innerHTML
+                    defer: virtual_doc.window.document.querySelector('script[defer]')?.innerHTML || ""
                 };
 
                 const plugins = [onEvent, slot, loop, reactive, ...(nijor_plugins ?? [])];
