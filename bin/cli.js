@@ -42,7 +42,7 @@ function DefaultCommand(){
     console.log(`   ${highlight('build',[255,251,14])} : For building a project in production mode`);
     console.log(`   ${highlight('dev',[255,251,14])} : For starting the dev server`);
     console.log(`   ${highlight('-v',[255,251,14])} : To check version \n`);
-    console.log(`For more information, check docs at ${highlight('https://nijorjs.github.io',[0,195,255])}`);
+    console.log(`For more information, check docs at ${highlight('https://nijor.dev',[0,195,255])}`);
 }
 
 try {
