@@ -14,7 +14,6 @@ import path from 'path';
 import onEvent from './plugin/event.js';
 import slot from './plugin/slot.js';
 import { loop } from './plugin/loop.js';
-import { nload } from './plugin/load.js';
 import { reactive } from './plugin/reactivity.js';
 
 export default options => {
@@ -128,10 +127,9 @@ export default options => {
                     components: $components,
                     global: "",
                     main: compileReactive($script),
-                    defer: ""
+                    defer: virtual_doc.window.document.querySelector('script[defer]').innerHTML
                 };
 
-                // const plugins = [reactive, onEvent, slot, loop, nload, ...(nijor_plugins ?? [])];
                 const plugins = [onEvent, slot, loop, reactive, ...(nijor_plugins ?? [])];
 
                 return {
