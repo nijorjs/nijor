@@ -1,6 +1,6 @@
 import { minifyHTML } from '../../utils/minify.js';
 import uniqeid from '../../utils/uniqeid.js';
-import { runComponentsCount, getAllComponents } from './sandbox.js';
+import { runComponents, getAllComponents } from './sandbox.js';
 
 export function loop({ document, scope, scripts, module_type }) {
 
@@ -51,7 +51,7 @@ export function loop({ document, scope, scripts, module_type }) {
 
         const code = `\${${source}.map(function(${variable},index${scope}){return \`${template}\`;}).join("")}`;
         element.innerHTML = code;
-        const $run_components = runComponentsCount(element, scope)(`${source}.length`);
+        const $run_components = runComponents(element, scope);
 
         if (raw_source.startsWith('$.')){ 
 

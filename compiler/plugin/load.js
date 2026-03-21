@@ -1,5 +1,5 @@
 import { minifyHTML } from '../../utils/minify.js';
-import { runComponents, runComponentsCount} from './sandbox.js';
+import { runComponents } from './sandbox.js';
 
 export function nload({document, scope, scripts}) {
 
@@ -65,7 +65,7 @@ export function nload({document, scope, scripts}) {
                     }
                     const fragment_${scope} = range_${scope}.createContextualFragment(template_${scope});
                     div${scope}.replaceChildren(fragment_${scope});
-                    ${runComponentsCount($ok, scope)(`count${scope}`)}
+                    ${runComponents($ok, scope)}
                 }catch(err){
                     const fragment_${scope} = range_${scope}.createContextualFragment(\`${minifyHTML($error.innerHTML)}\`);
                     div${scope}.replaceChildren(fragment_${scope});
@@ -94,7 +94,7 @@ export function nload({document, scope, scripts}) {
                         template_${scope} = \`${minifyHTML($ok.innerHTML)}\`.replace('<!--${loopID}-->',template_${scope});
                         const fragment_${scope} = range_${scope}.createContextualFragment(template_${scope});
                         div${scope}.replaceChildren(fragment_${scope});
-                        ${runComponentsCount($ok, scope)(`count${scope}`)}
+                        ${runComponents($ok, scope)}
                     }catch(err){
                         const fragment_${scope} = range_${scope}.createContextualFragment(\`${minifyHTML($error.innerHTML)}\`);
                         div${scope}.replaceChildren(fragment_${scope});

@@ -24,8 +24,8 @@ export default class {
         this.cb = callback;
     }
 
-    async run(name, num = 1) {
-        const elements = Array.from(document.getElementsByTagName(name)).slice(0, num);
+    async run(name) {
+        const elements = Array.from(document.getElementsByTagName(name));
 
         await Promise.all(elements.map(async (component) => {
             const $ = state({});
