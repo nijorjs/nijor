@@ -1,4 +1,4 @@
-const Routes = new Map();
+const Routes = [];
 const Layouts = new Map();
 
 let events = [];
@@ -7,28 +7,121 @@ const pageCache = new Map();
 const layoutCache = new Map();
 const prefetched = new Set();
 
+/* ---------------- NORMALIZE ---------------- */
+
 function normalizeUrl(url, updateHistory = false) {
-    let normalized = url.split('?')[0];
+    const u = new URL(url, window.location.origin);
 
-    if (normalized.endsWith('/') && normalized !== "/") {
-        normalized = normalized.slice(0, -1);
+    let pathname = u.pathname;
+
+    // Remove trailing slash (except root)
+    if (pathname.endsWith('/') && pathname !== "/") {
+        pathname = pathname.slice(0, -1);
     }
 
-    if (normalized.endsWith('.html')) {
-        normalized = normalized.slice(0, -5);
-        if (updateHistory) history.replaceState(null, "", normalized);
+    // Remove .html
+    if (pathname.endsWith('.html')) {
+        pathname = pathname.slice(0, -5);
     }
 
-    return normalized;
+    const full = pathname + u.search + u.hash;
+
+    if (updateHistory) {
+        history.replaceState(null, "", full);
+    }
+
+    return pathname; // ⚠️ ONLY return pathname for routing
 }
 
-function getParams(route, match) {
-    const params = {};
-    route.params.forEach((name, index) => {
-        params[name] = match[index + 1];
-    });
+/* ---------------- TOKEN MATCHING ---------------- */
+
+function matchSegment(tokens, segment) {
+    let i = 0;
+    let params = {};
+
+    for (let t = 0; t < tokens.length; t++) {
+        const token = tokens[t];
+
+        // 🔹 LITERAL
+        if (token.type === "literal") {
+            if (!segment.startsWith(token.value, i)) return null;
+            i += token.value.length;
+        }
+
+        // 🔹 PARAM
+        else if (token.type === "param") {
+            const remaining = segment.slice(i);
+
+            // 🔑 Find next literal
+            let nextLiteral = null;
+
+            for (let j = t + 1; j < tokens.length; j++) {
+                if (tokens[j].type === "literal") {
+                    nextLiteral = tokens[j].value;
+                    break;
+                }
+            }
+
+            let value;
+
+            if (nextLiteral) {
+                const idx = remaining.indexOf(nextLiteral);
+                if (idx === -1) return null;
+
+                value = remaining.slice(0, idx);
+            } else {
+                value = remaining;
+            }
+
+            // 🔒 Validate types
+            if (token.kind === "int") {
+                if (!/^\d+$/.test(value)) return null;
+            } else {
+                if (value.length === 0) return null;
+            }
+
+            params[token.name] = value;
+            i += value.length;
+        }
+    }
+
+    // Must consume entire segment
+    if (i !== segment.length) return null;
+
     return params;
 }
+
+function matchRoute(route, pathSegments) {
+    if (route.segments.length !== pathSegments.length) return null;
+
+    let params = {};
+
+    for (let i = 0; i < route.segments.length; i++) {
+        const res = matchSegment(route.segments[i], pathSegments[i]);
+        if (!res) return null;
+        Object.assign(params, res);
+    }
+
+    return params;
+}
+
+/* ---------------- SCORING ---------------- */
+
+function scoreRoute(route) {
+    let score = 0;
+
+    for (const segment of route.segments) {
+        for (const token of segment) {
+            if (token.type === "literal") score += 100;
+            else if (token.kind === "int") score += 70;
+            else score += 40;
+        }
+    }
+
+    return score;
+}
+
+/* ---------------- PAGE RENDER ---------------- */
 
 function loadPage(route, importer) {
     if (!pageCache.has(route)) {
@@ -58,9 +151,7 @@ async function renderPage(route, importer, params) {
         layoutPromise = loadLayout(layoutName, importLayout);
     }
 
-    const [Layout] = await Promise.all([
-        layoutPromise
-    ]);
+    const [Layout] = await Promise.all([layoutPromise]);
 
     if (Layout) {
         await Layout.render(window.nijor.root);
@@ -71,68 +162,81 @@ async function renderPage(route, importer, params) {
 }
 
 async function render404(url) {
-    if (url === "/") return false;
+    let segments = url.split("/").filter(Boolean);
 
-    let current = url;
+    while (segments.length >= 0) {
+        const testSegments = [...segments, "404"];
 
-    while (current !== "/") {
-        let parts = current.split('/');
-
-        if (parts[parts.length - 1] === "404") {
-            parts.pop();
-        }
-
-        parts.pop();
-        parts.push("404");
-
-        current = parts.join('/');
-
-        if (current.endsWith('/') && current !== "/") {
-            current = current.slice(0, -1);
-        }
-
-        for (const [route, { page }] of Routes.entries()) {
-            const match = current.match(route.pattern);
-            if (match) {
-                await page(getParams(route, match));
+        for (const route of Routes) {
+            const params = matchRoute(route, testSegments);
+            if (params) {
+                await route.page(params);
                 return true;
             }
         }
 
-        if (current === "/404") break;
+        if (segments.length === 0) break;
+        segments.pop();
     }
 
     return false;
 }
 
+/* ---------------- ROUTE RESOLUTION ---------------- */
+
 export async function RenderRoute(url) {
     url = normalizeUrl(url, true);
 
-    for (const [route, { page }] of Routes.entries()) {
-        const match = url.match(route.pattern);
-        if (match) {
-            await page(getParams(route, match));
-            return true;
+    const pathSegments = url.split("/").filter(Boolean);
+
+    let matches = [];
+
+    for (const route of Routes) {
+        const params = matchRoute(route, pathSegments);
+        if (params) {
+            matches.push({
+                route,
+                params,
+                score: scoreRoute(route)
+            });
         }
     }
 
+    if (matches.length > 0) {
+        matches.sort((a, b) => b.score - a.score);
+
+        const best = matches[0];
+        await best.route.page(best.params);
+        return true;
+    }
+
+    // 👇 NEW: fallback to 404 chain
     return await render404(url);
 }
 
+/* ---------------- ROUTE REGISTRATION ---------------- */
+
 window.nijor.setRoute = function (routeData, importer) {
-    const page = async params => {
-        try {
-            await renderPage(routeData, importer, params);
-        } catch (e) {
-            console.error(e);
+    const route = {
+        ...routeData,
+        importer,
+        page: async params => {
+            try {
+                await renderPage(routeData, importer, params);
+            } catch (e) {
+                console.error(e);
+            }
         }
-    }
-    Routes.set(routeData, { page, importer });
+    };
+
+    Routes.push(route);
 };
 
 window.nijor.addLayout = function (name, importer) {
     Layouts.set(name, importer);
 };
+
+/* ---------------- NAVIGATION ---------------- */
 
 export const onRoute = fn => events.push(fn);
 
@@ -185,26 +289,38 @@ window.nijor.initialRender = async (route) => {
     await navigate(route, true);
 };
 
+/* ---------------- PREFETCH ---------------- */
+
 function getRouteFromPath(path) {
-    for (const [route, { importer }] of Routes.entries()) {
-        if (route.pattern.test(path)) {
-            return { route, importer };
+    const segments = path.split("/").filter(Boolean);
+
+    let matches = [];
+
+    for (const route of Routes) {
+        const params = matchRoute(route, segments);
+        if (params) {
+            matches.push({
+                route,
+                score: scoreRoute(route)
+            });
         }
     }
-    return null;
+
+    if (matches.length === 0) return null;
+
+    matches.sort((a, b) => b.score - a.score);
+    return matches[0];
 }
 
 function prefetchPath(path) {
     const url = new URL(path, window.location.origin);
-    path = url.pathname;
-
-    const match = getRouteFromPath(path);
+    const match = getRouteFromPath(url.pathname);
     if (!match) return;
 
-    const { route, importer } = match;
+    const { route } = match;
+    const importer = route.importer; // ✅ FIX
 
     if (prefetched.has(route)) return;
-
     prefetched.add(route);
 
     const pagePromise = loadPage(route, importer);
@@ -217,6 +333,8 @@ function prefetchPath(path) {
         }
     }).catch(() => { });
 }
+
+/* ---------------- LINK PREFETCH OBSERVER ---------------- */
 
 const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
 
@@ -239,7 +357,6 @@ if ("IntersectionObserver" in window) {
             if (isSlow) return;
 
             idle(() => prefetchPath(href));
-
             observer.unobserve(link);
         });
     }, {

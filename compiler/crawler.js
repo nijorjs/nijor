@@ -19,8 +19,9 @@ export async function crawlDirectory(directory,  type, inplace=true) {
 
 function AddRoute(filepath) {
     let url = getRoute(filepath);
-    let { params, pattern } = getRouteMapKey(url);
-    Code += `window.nijor.setRoute({ pattern: ${pattern}, params : ${JSON.stringify(params)} },()=>import('${filepath.replace(/\\/g, '/')}'));\n`;
+    let { segments } = getRouteMapKey(url);
+
+    Code += `window.nijor.setRoute({ segments: ${JSON.stringify(segments)} },()=>import('${filepath.replace(/\\/g, '/')}'));\n`;
 }
 
 function AddLayout(filepath) {
@@ -61,12 +62,48 @@ function getRoute(filepath) {
 }
 
 function getRouteMapKey(path) {
-    // Convert path pattern to regex and store parameter names
-    const params = [];
-    const regexPath = path.replace(/\[(.*?)\]/g, (_, name) => { params.push(name); return '([^/]+)'; }).replace(/\//g, '\\/');
+    const segments = path.split('/').filter(Boolean);
 
-    return {
-        pattern: new RegExp(`^${regexPath}$`),
-        params
-    };
+    const parsedSegments = segments.map(segment => {
+        let tokens = [];
+        let i = 0;
+
+        while (i < segment.length) {
+            // PARAM: [name] or [id:int]
+            if (segment[i] === '[') {
+                let j = i + 1;
+                while (j < segment.length && segment[j] !== ']') j++;
+
+                const raw = segment.slice(i + 1, j);
+
+                let [name, kind] = raw.split(":");
+                kind = kind || "string";
+
+                tokens.push({
+                    type: "param",
+                    name,
+                    kind
+                });
+
+                i = j + 1;
+            }
+
+            // LITERAL
+            else {
+                let j = i;
+                while (j < segment.length && segment[j] !== '[') j++;
+
+                tokens.push({
+                    type: "literal",
+                    value: segment.slice(i, j)
+                });
+
+                i = j;
+            }
+        }
+
+        return tokens;
+    });
+
+    return { segments: parsedSegments };
 }

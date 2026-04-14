@@ -19,5 +19,5 @@ export async function Render(root) {
     //     Hydrate();
     //     return;
     // }
-    await window.nijor.initialRender(window.location.pathname);
+    await window.nijor.initialRender(window.location.pathname + window.location.search + window.location.hash);
 }

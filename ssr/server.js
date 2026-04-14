@@ -93,7 +93,62 @@ function renderTemplates(content, computed, placeholderID) {
     return content.replace(`<!--@[${placeholderID}]-->`, computed);
 }
 
-const middlewares = [];
+function cookieMiddleware(req, res, next) {
+
+    function parseCookies(cookieHeader) {
+        const cookies = new Map();
+        if (!cookieHeader) return cookies;
+
+        cookieHeader.split(";").forEach(cookie => {
+            const [key, ...val] = cookie.trim().split("=");
+            cookies.set(key, decodeURIComponent(val.join("=")));
+        });
+
+        return cookies;
+    }
+
+    const parsedCookies = parseCookies(req.headers.cookie);
+    const setCookieHeaders = [];
+
+    req.cookies = {
+        get(name) {
+            return parsedCookies.get(name);
+        },
+
+        set(name, value, options = {}) {
+            let cookie = `${name}=${encodeURIComponent(value)}`;
+
+            if (options.maxAge) cookie += `; Max-Age=${options.maxAge}`;
+            if (options.expires) cookie += `; Expires=${options.expires.toUTCString()}`;
+            if (options.httpOnly) cookie += `; HttpOnly`;
+            if (options.secure) cookie += `; Secure`;
+            if (options.path) cookie += `; Path=${options.path}`;
+            if (options.sameSite) cookie += `; SameSite=${options.sameSite}`;
+
+            setCookieHeaders.push(cookie);
+        },
+
+        delete(name, options = {}) {
+            this.set(name, "", {
+                ...options,
+                expires: new Date(0)
+            });
+        }
+    }
+
+    const originalEnd = res.end;
+
+    res.end = function (...args) {
+        if (setCookieHeaders.length > 0) {
+            res.setHeader("Set-Cookie", setCookieHeaders);
+        }
+        return originalEnd.apply(res, args);
+    };
+
+    next();
+}
+
+const middlewares = [ cookieMiddleware ];
 
 function use(fn) {
     middlewares.push(fn);
