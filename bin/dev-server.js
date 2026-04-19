@@ -12,6 +12,8 @@ const rootDir = process.cwd();
 const srcDir = path.join(rootDir, 'src');
 
 export default async function () {
+    await loadEnv();
+    
     const assetsDir = path.join(rootDir, 'assets');
 
     const mimeTypes = {
@@ -244,6 +246,22 @@ function cookieMiddleware(req, res, next) {
     };
 
     next();
+}
+
+async function loadEnv() {
+    const envPath = path.join(rootDir, '.env');
+    if (fs.existsSync(envPath)) {
+        const content = await fs.promises.readFile(envPath, 'utf-8');
+        content.split('\n').forEach(line => {
+            // Remove comments and trim whitespace
+            const [key, ...value] = line.split('=');
+            if (key && value.length > 0 && !key.startsWith('#')) {
+                const k = key.trim();
+                const v = value.join('=').trim().replace(/^["']|["']$/g, ''); // Remove quotes
+                process.env[k] = v;
+            }
+        });
+    }
 }
 
 let watcher;
