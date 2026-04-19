@@ -63,7 +63,7 @@ export function loop({ document, scope, scripts, module_type }) {
             ${$run_components}
             `;
 
-            scripts.main += `$.$subscribe('${source.replace('$.','')}',()=>{${reload_code}});`;
+            scripts.main += ` $.$subscribe('${source.replace('$.','')}',async ()=>{${reload_code}});`;
         }
 
         if(raw_source.startsWith('@')){

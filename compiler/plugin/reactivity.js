@@ -128,11 +128,11 @@ export function reactive({ document, scope, scripts, module_type }) {
     const id = element.id || `R\${$id}${uniqueid(5, 7)}`;
     if (!element.id) element.id = id;
     const tagName = element.tagName.toLowerCase();
-    if (tagName == "input" || tagName == "textarea" || element.getAttribute("contenteditable") == "true") {
+    if (tagName == "input" || tagName == "textarea" || tagName == "select" || element.getAttribute("contenteditable") == "true") {
       const variable = element.getAttribute("n:bind").trim().slice(3, -1);
-      const value = (tagName == "input" || tagName == "textarea") ? "value" : "innerText";
+      const value = (tagName == "input" || tagName == "textarea" || tagName == "select") ? "value" : "innerText";
       const fnName = `${variable}${index}@${scope}`;
-      scripts.main += `window.eventStorage['${fnName}'] = function(){ $.${variable} = document.getElementById(\`${id}\`).${value}; } `;
+      scripts.main += `window.eventStorage['${fnName}'] = function(){ $.${variable} = document.getElementById(\`${id}\`).${value}; }; `;
       element.setAttribute("oninput", `window.eventStorage['${fnName}']()`);
     }
     element.removeAttribute("n:bind");
