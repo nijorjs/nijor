@@ -266,11 +266,11 @@ async function navigate(path, replace = false) {
     ]);
 }
 
-window.nijor.redirect = (route) => {
+window.nijor.redirect = (route, replace = false) => {
     try {
         const url = new URL(route, window.location.origin);
         const path = url.pathname + url.search + url.hash;
-        navigate(path);
+        navigate(path, replace);
     } catch {
         window.location.href = route;
     }
@@ -318,7 +318,7 @@ function prefetchPath(path) {
     if (!match) return;
 
     const { route } = match;
-    const importer = route.importer; // ✅ FIX
+    const importer = route.importer;
 
     if (prefetched.has(route)) return;
     prefetched.add(route);

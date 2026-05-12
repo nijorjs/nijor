@@ -174,8 +174,13 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
     // Transform n:route
     document.body.querySelectorAll('a[n:route]').forEach(child => {
         let route = child.getAttribute('n:route');
+        let replace = false;
+        if(child.hasAttribute('replace')) {
+            replace = true;
+            child.removeAttribute('replace');
+        }
         child.removeAttribute('n:route');
-        child.setAttribute('onclick', `return window.nijor.redirect(this.href)`);
+        child.setAttribute('onclick', `return window.nijor.redirect(this.href,${replace})`);
         child.setAttribute('href', route);
     });
 
@@ -376,10 +381,6 @@ function processAttributes(element) {
 
             collectedVars.forEach(v => merged.add(v));
 
-            // if (attrName.startsWith('class:')) {
-            //     element.setAttribute(`${attrName.replace(':', '-')}`, [...merged].join(' '));
-            //     continue;
-            // }
             element.setAttribute(nAttrName, [...merged].join(' '));
         }
 
@@ -392,7 +393,6 @@ function processTextNode(node, parentElement) {
 
     if (!original.includes('{')) return;
 
-    // const exprMatches = [...original.matchAll(/\{([^}]+)\}/g)];
     const exprMatches = [...original.matchAll(/(?<!\\)\{([^}]+)\}/g)];
 
     let collectedVars = new Set();
