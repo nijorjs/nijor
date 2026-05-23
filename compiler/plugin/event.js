@@ -10,17 +10,17 @@ function getElementsWithOnEventAttributes(doc) {
 
 let registeredFunctions = [];
 
-function registerGlobalFunction(funcExpr, scope, bucket) {
+function registerGlobalFunction(funcExpr, scope) {
     const match = funcExpr.match(/(\w+)\s*\(/);
     if (!match) return '';
     const name = match[1];
     const marker = `${name}@${scope}`
     if(registeredFunctions.includes(`${marker}`)) return '';
     registeredFunctions.push(`${name}@${scope}`);
-    return `window.nijor.bucket.${bucket}['${marker}'] = ${name};`;
+    return `window.nijor.bucket['${marker}'] = ${name}; window.nijor.bucket_size++;`;
 }
 
-function registerFunction(funcExpr, scope, bucket) {
+function registerFunction(funcExpr, scope) {
     const isAwait = /^\s*await\s+/.test(funcExpr);
     const cleanExpr = funcExpr.replace(/^\s*await\s+/, '');
     const match = cleanExpr.match(/(\w+)\s*\((.*?)\)/);
@@ -29,19 +29,19 @@ function registerFunction(funcExpr, scope, bucket) {
     const name = match[1];
     const wrapper = isAwait ? `async (...args)=> await ${name}(...args, $);` : `(...args)=> ${name}(...args, $);`;
 
-    const marker = `${name}@${scope}:\${$id}`;
+    const marker = `${name}\${$id}@${scope}`;
     if(registeredFunctions.includes(`${marker}`)) return '';
     registeredFunctions.push(marker);
 
-    return `window.nijor.bucket.${bucket}[\`${marker}\`] = ${wrapper}`;
+    return `window.nijor.bucket[\`${marker}\`] = ${wrapper}; window.nijor.bucket_size++;`;
 }
 
-function rewriteCall(fnCall, scope, isStateFunction = false, bucket) {
+function rewriteCall(fnCall, scope, isStateFunction = false) {
     return fnCall.replace(
         /(\breturn\s*\(?\s*)?(await\s*)?(\w+)\s*\(/,
         (_, returnPrefix = '', awaitPrefix = '', name) => {
-            const key = isStateFunction ? `${name}@${scope}:\${$id}` : `${name}@${scope}`;
-            return `${returnPrefix}${awaitPrefix}window.nijor.bucket.${bucket}['${key}'](`;
+            const key = isStateFunction ? `${name}\${$id}@${scope}` : `${name}@${scope}`;
+            return `${returnPrefix}${awaitPrefix}window.nijor.bucket['${key}'](`;
         }
     );
 }
@@ -199,7 +199,6 @@ function extractFunction(code, functionName) {
 export default function ({ document, scope, module_type, scripts }) {
     getElementsWithOnEventAttributes(document).forEach(el => {
         const events = el.getAttributeNames().filter(a => a.startsWith('on:'));
-        const bucket = module_type === "layout" ? "layout" : "page";
 
         events.forEach(attr => {
             const handler = el.getAttribute(attr);
@@ -214,12 +213,12 @@ export default function ({ document, scope, module_type, scripts }) {
 
             const isStateFunction = hasStateAsLastParam(scripts.global, fnName);
 
-            const rewrittenCall = rewriteCall(handler, scope, isStateFunction, bucket);
+            const rewrittenCall = rewriteCall(handler, scope, isStateFunction);
 
             if (isStateFunction) {
-                scripts.main += registerFunction(handler, scope, bucket);
+                scripts.main += registerFunction(handler, scope);
             } else {
-                scripts.global += registerGlobalFunction(handler, scope, bucket);
+                scripts.global += registerGlobalFunction(handler, scope);
             }
 
             el.setAttribute(attr.replace('on:', 'on'), rewrittenCall);

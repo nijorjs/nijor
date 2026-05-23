@@ -236,13 +236,13 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             const $id = "__${scope}";
             
             const __${scope}__ = new page_${process.seed}(async function(${props},$){
-                window.nijor.bucket.page = {};
                 document.title = \`${title}\`;
                 ${scripts.main}
                 return(\`${template}\`);
             },async function(${props},$){
                 ${scripts.defer}
-            },'${layout}');
+            },'${layout}',
+            '${scope}');
 
             ${scripts.global}
 
@@ -259,12 +259,11 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             const $id = "__${scope}";
 
             const __${scope}__ = new layout_${process.seed}(async function(){
-                window.nijor.bucket.layout = {};
                 ${scripts.main}
                 return(\`${template}\`);
             },async function(){
                 ${scripts.defer}
-            });
+            },'${scope}');
 
             ${scripts.global}
 
@@ -282,7 +281,8 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             return(\`${template}\`);
         },async function(${props},$id,$){
             ${scripts.defer}
-        });
+        },
+        '${scope}');
 
         ${scripts.global}
 

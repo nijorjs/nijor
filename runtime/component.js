@@ -19,9 +19,10 @@ function getAttributes(el) {
 const range = document.createRange();
 
 export default class {
-    constructor(template, callback) {
+    constructor(template, callback, scope) {
         this.template = template;
         this.cb = callback;
+        this.scope = scope;
     }
 
     async run(name) {

@@ -58,7 +58,6 @@ function getReactiveClasses(document) {
 }
 
 export function reactive({ document, scope, scripts, module_type }) {
-    const bucket = module_type === "layout" ? "layout" : "page";
 
     // Handling reactive variables inside tags
     document.querySelectorAll('[n\\:var]').forEach(element => {
@@ -135,9 +134,8 @@ export function reactive({ document, scope, scripts, module_type }) {
             const variable = element.getAttribute("n:bind").trim().slice(3, -1);
             const value = (tagName == "input" || tagName == "textarea" || tagName == "select") ? "value" : "innerText";
             const fnName = `${variable}${index}@${scope}`;
-            const bucket = module_type === "layout" ? "layout" : "page";
-            scripts.main += `window.nijor.bucket.${bucket}['${fnName}'] = function(){ $.${variable} = document.getElementById(\`${id}\`).${value}; }; `;
-            element.setAttribute("oninput", `window.nijor.bucket.${bucket}['${fnName}']()`);
+            scripts.main += `window.nijor.bucket['${fnName}'] = function(){ $.${variable} = document.getElementById(\`${id}\`).${value}; }; window.nijor.bucket_size++; `;
+            element.setAttribute("oninput", `window.nijor.bucket['${fnName}']()`);
         }
         element.removeAttribute("n:bind");
     });

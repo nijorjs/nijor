@@ -3,8 +3,9 @@
 window.nijor = { 
     root: document.body, 
     layout: null,
-    bucket: { layout: {}, page: {} }
-};
+    bucket: {}, // Stores all the event handlers and state update functions
+    bucket_size: 0, // Used to track the size of the bucket for cleanup
+}
 
 function Hydrate() {
     const hydrationTemplate = document.head.querySelector("script[type='hydration']");

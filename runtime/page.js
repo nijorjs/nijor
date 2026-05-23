@@ -3,10 +3,11 @@ import { state } from "./reactivity.js";
 const range = document.createRange();
 
 export default class{
-    constructor(template,callback,layout) {
+    constructor(template,callback,layout,scope) {
         this.template = template;
         this.cb = callback;
         this.layout = layout;
+        this.scope = scope;
     }
     async render(root,params){
         const $ = state({});

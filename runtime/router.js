@@ -255,9 +255,20 @@ async function runRouteHooks(path) {
     );
 }
 
-async function cleanup(){
+function cleanBucket() {
+    for (const key of Object.keys(window.nijor.bucket)) {
+        const scope = key.split("@")[1];
+        if(scope && !document.querySelector(`[n-scope="${scope}"]`)){
+            delete window.nijor.bucket[key];
+        }
+    }
+}
+
+async function cleanup() {
     cleanCacheCommentNodes();
-    if(cleanupFunctions.length === 0) return;
+
+    if (cleanupFunctions.length === 0) return;
+
     await Promise.all(
         cleanupFunctions.map(fn => {
             try {
@@ -284,6 +295,7 @@ async function navigate(path, replace = false) {
         RenderRoute(path),
         runRouteHooks(path)
     ]);
+    if(window.nijor.bucket_size>25) cleanBucket();
 }
 
 window.nijor.redirect = (route, replace = false) => {
@@ -304,6 +316,7 @@ window.addEventListener("popstate", async () => {
         RenderRoute(path),
         runRouteHooks(path)
     ]);
+    if(window.nijor.bucket_size>25) cleanBucket();
 });
 
 window.nijor.initialRender = async (route) => {
