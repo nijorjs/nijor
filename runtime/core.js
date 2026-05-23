@@ -19,6 +19,7 @@ function Hydrate() {
 export let cleanupFunctions = []; // Stores all the functions to be run on cleanup of page + components
 
 export const onCleanup = fn => cleanupFunctions.push(fn);
+export const resetCleanup = () => cleanupFunctions = [];
 
 export async function Render(root) {
     if (root) window.nijor.root = root;

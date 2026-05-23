@@ -1,4 +1,4 @@
-import { cleanupFunctions } from "./core.js";
+import { cleanupFunctions, resetCleanup } from "./core.js";
 import { cleanCacheCommentNodes } from "./reactivity.js";
 
 const Routes = [];
@@ -268,7 +268,7 @@ async function cleanup(){
         })
     );
 
-    cleanupFunctions = [];
+    resetCleanup();
 }
 
 async function navigate(path, replace = false) {
