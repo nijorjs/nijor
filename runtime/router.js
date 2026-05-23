@@ -1,3 +1,4 @@
+import { cleanupFunctions } from "./core.js";
 import { cleanCacheCommentNodes } from "./reactivity.js";
 
 const Routes = [];
@@ -8,10 +9,6 @@ let events = [];
 const pageCache = new Map();
 const layoutCache = new Map();
 const prefetched = new Set();
-
-let cleanupFunctions = [];
-
-export const onCleanup = fn => cleanupFunctions.push(fn);
 
 /* ---------------- NORMALIZE ---------------- */
 
