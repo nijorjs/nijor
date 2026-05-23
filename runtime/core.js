@@ -1,7 +1,10 @@
 // window.nijor is an object used by Nijor during runtime.
-// window.eventStorage is an object that stores all the events like on:click="clicked()" (on:{event}="func()") 
-window.nijor = { root: document.body, layout: null };
-window.eventStorage = {};
+// window.nijor.bucket is an object that stores all the events like on:click="clicked()" (on:{event}="func()") 
+window.nijor = { 
+    root: document.body, 
+    layout: null,
+    bucket: { layout: {}, page: {} }
+};
 
 function Hydrate() {
     const hydrationTemplate = document.head.querySelector("script[type='hydration']");

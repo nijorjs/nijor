@@ -21,26 +21,16 @@ export default async function (__dirname) {
     await fs.promises.mkdir(outputDir);
     await fs.promises.mkdir(path.join(outputDir, 'assets'));
 
-    let start = performance.now();
-    await Compile({ minify: true });
-    let end = performance.now();
-    console.log(`Compiled in ${(end - start).toFixed(2)}ms`);
-
-    start = performance.now();
+    await Compile({ dev: false });
     await copyFiles(path.join(RootPath, 'assets'), path.join(outputDir, 'assets'));
-    end = performance.now();
-    console.log(`Assets copied in ${(end - start).toFixed(2)}ms`);
     await fs.promises.copyFile(path.join(RootPath,'index.html'),path.join(outputDir, 'index.html'));
 
-    start = performance.now();
     let serverCode = await fs.promises.readFile(path.join(__dirname, 'server/prod.js'), 'utf-8');
     const tmpFile = path.join(outputDir, 'server.tmp.js');
     await fs.promises.writeFile(tmpFile, serverCode);
     await bundle(tmpFile);
     await fs.promises.rm(tmpFile);
-    end = performance.now();
-    console.log(`Write the server in ${(end - start).toFixed(2)}ms`);
-    console.log('Project build successfully !');
+    console.log('Done !');
 
     if(config.build?.mode!="ssr") return ;
 

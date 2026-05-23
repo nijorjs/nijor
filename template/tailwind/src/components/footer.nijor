@@ -1,0 +1,5 @@
+<body>
+    <footer class="mt-auto flex w-screen flex-col items-center border-t border-white/5 bg-[rgba(3,7,18,0.8)] p-6 text-center text-[14px] tracking-[1px] text-white">
+        <p>Built with Nijor & Tailwind</p>
+    </footer>
+</body>

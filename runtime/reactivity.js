@@ -1,5 +1,6 @@
 // Get elements enclosed within <!--id-->...<!--/id-->
 let cache = new Map();
+
 export function getNodesByCommentID(commentID, rootNode) {
     let regionStart = null;
     let regionEnd = null;
@@ -213,3 +214,5 @@ export async function reload(id,component,name,str) {
     range_.insertNode(fragment);
     await component.run(name,1);   
 }
+
+export const cleanCacheCommentNodes = () => cache.clear();

@@ -1,0 +1,14 @@
+<body>
+    <header class="fixed top-0 left-0 z-100 flex h-[60px] w-screen items-center justify-between border-b border-[#1f293d] bg-[#0b111a] px-5">
+    
+        <a n:route="/">
+        <img src="/images/nijor.svg" alt="Nijor Logo" class="h-[35px] w-[35px] align-middle"/>
+    </a>
+
+    <div class="flex gap-[15px]">
+        <a href="https://nijor.dev/docs" target="_blank" rel="noopener noreferrer" class="text-[15px] font-medium text-white transition-colors duration-200 hover:text-[#0099ff]">
+            Docs
+        </a>
+    </div>
+</header>
+</body>

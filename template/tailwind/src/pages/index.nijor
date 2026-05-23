@@ -1,0 +1,28 @@
+<head>
+    <title>Nijor</title>
+</head>
+
+<body>
+    <div class="flex flex-col items-center justify-center px-0 py-12 text-center text-white">
+        <div class="mb-[30px] flex items-center gap-5">
+            <img src="/images/nijor.svg" alt="Nijor Logo" class="h-[120px] w-[120px]"/>
+            <span class="text-[42px] font-light text-white">+</span>
+            <img src="/images/tailwind.svg" alt="Tailwind Logo" class="h-[120px] w-[120px]"/>
+        </div>
+
+        <p class="mb-[30px] text-[16px] leading-[1.6] text-white/70">
+            Edit the src/pages/index.nijor directory to view changes !
+        </p>
+
+        <button on:click="add()" class="cursor-pointer border-2 border-transparent bg-[#0099ff3a] px-7 py-3.5 text-[16px] font-semibold text-[#0099ff] transition-colors duration-200 hover:border-[#0099ff]">
+            Count is {$.count}
+        </button>
+    </div>
+</body>
+<script>
+    $.count = 0;
+
+    function add($) {
+        $.count++;
+    }
+</script>

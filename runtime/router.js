@@ -1,3 +1,5 @@
+import { cleanCacheCommentNodes } from "./reactivity.js";
+
 const Routes = [];
 const Layouts = new Map();
 
@@ -6,6 +8,10 @@ let events = [];
 const pageCache = new Map();
 const layoutCache = new Map();
 const prefetched = new Set();
+
+let cleanupFunctions = [];
+
+export const onCleanup = fn => cleanupFunctions.push(fn);
 
 /* ---------------- NORMALIZE ---------------- */
 
@@ -230,11 +236,11 @@ window.nijor.setRoute = function (routeData, importer) {
     };
 
     Routes.push(route);
-};
+}
 
 window.nijor.addLayout = function (name, importer) {
     Layouts.set(name, importer);
-};
+}
 
 /* ---------------- NAVIGATION ---------------- */
 
@@ -252,6 +258,22 @@ async function runRouteHooks(path) {
     );
 }
 
+async function cleanup(){
+    cleanCacheCommentNodes();
+    if(cleanupFunctions.length === 0) return;
+    await Promise.all(
+        cleanupFunctions.map(fn => {
+            try {
+                return fn();
+            } catch (e) {
+                console.error(e);
+            }
+        })
+    );
+
+    cleanupFunctions = [];
+}
+
 async function navigate(path, replace = false) {
     const current = window.location.pathname + window.location.search + window.location.hash;
 
@@ -260,6 +282,7 @@ async function navigate(path, replace = false) {
         else history.pushState({ path }, "", path);
     }
 
+    await cleanup();
     await Promise.all([
         RenderRoute(path),
         runRouteHooks(path)
@@ -279,6 +302,7 @@ window.nijor.redirect = (route, replace = false) => {
 
 window.addEventListener("popstate", async () => {
     const path = window.location.pathname + window.location.search + window.location.hash;
+    await cleanup();
     await Promise.all([
         RenderRoute(path),
         runRouteHooks(path)
@@ -287,7 +311,7 @@ window.addEventListener("popstate", async () => {
 
 window.nijor.initialRender = async (route) => {
     await navigate(route, true);
-};
+}
 
 /* ---------------- PREFETCH ---------------- */
 

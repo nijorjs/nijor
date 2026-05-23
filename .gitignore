@@ -1,6 +1,8 @@
 node_modules
-template/assets/modules/*
-template/assets/style.css
+template/blank/assets/modules/*
+template/blank/assets/style.css
+template/tailwind/assets/modules/*
+template/tailwind/assets/style.css
 template/build/*
 test
 publish.sh

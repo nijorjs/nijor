@@ -1,0 +1,17 @@
+<import name="header" source="@/components/header.nijor" />
+<import name="footer" source="@/components/footer.nijor" />
+
+<body>
+    <header></header>
+    <main n:slot></main>
+    <footer></footer>
+</body>
+<style>
+    main {
+        flex: 1 0 auto;
+        width: 100%;
+        margin-top: 60px;
+        display: flex;
+        flex-direction: column;
+    }
+</style>

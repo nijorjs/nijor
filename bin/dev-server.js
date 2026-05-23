@@ -170,7 +170,7 @@ export default async function () {
     });
 
     try {
-        await Compile({ minify: false });
+        await Compile({ dev: true });
     } catch (error) {
         console.log(error);
     }
@@ -269,7 +269,7 @@ let watcher;
 async function recompile(eventEmitter) {
     try {
         const start = performance.now();
-        await Compile({ minify: false });
+        await Compile({ dev: true });
         const end = performance.now();
         console.log(`Compiled in ${(end - start).toFixed(2)}ms`);
         eventEmitter.emit('compiled');

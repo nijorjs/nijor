@@ -75,7 +75,7 @@ export default options => {
 
                 });
 
-                // Hanlde class:classname
+                // Handle class:classname
                 document.querySelectorAll("*").forEach(element => {
                     const ReactiveClasses = [];
 
@@ -118,7 +118,7 @@ export default options => {
                 });
 
                 // Write style sheets
-                await WriteStyleSheet(document, scope, options);
+                await WriteStyleSheet(document, scope);
 
                 const [$import, $script] = Scripts.sanitize(virtual_doc);
                 const $components = Scripts.ReturnModule(virtual_doc, scope);
@@ -199,10 +199,7 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
 
     // Running all the visible components
     const regex = new RegExp(`\\w+_${scope}`);
-    const allComponents = [...document.body.querySelectorAll('*')]
-        .filter(el => regex.test(el.tagName.toLowerCase()) && !el.closest('[n:loop]'))
-        .map(el => el.tagName.toLowerCase())
-        .reverse();
+    const allComponents = [...document.body.querySelectorAll('*')].filter(el => regex.test(el.tagName.toLowerCase()) && !el.closest('[n:loop]')).map(el => el.tagName.toLowerCase()).reverse();
 
     document.body.querySelectorAll("[n:loop]").forEach(l => l.removeAttribute('n:loop'));
 
@@ -239,6 +236,7 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             const $id = "__${scope}";
             
             const __${scope}__ = new page_${process.seed}(async function(${props},$){
+                window.nijor.bucket.page = {};
                 document.title = \`${title}\`;
                 ${scripts.main}
                 return(\`${template}\`);
@@ -261,6 +259,7 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             const $id = "__${scope}";
 
             const __${scope}__ = new layout_${process.seed}(async function(){
+                window.nijor.bucket.layout = {};
                 ${scripts.main}
                 return(\`${template}\`);
             },async function(){

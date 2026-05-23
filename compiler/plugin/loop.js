@@ -3,6 +3,7 @@ import uniqeid from '../../utils/uniqeid.js';
 import { runComponents, getAllComponents } from './sandbox.js';
 
 export function loop({ document, scope, scripts, module_type }) {
+    const bucket = module_type === "layout" ? "layout" : "page";
 
     scripts.import.add(`import {getNodesByCommentID as $comment_${scope}} from 'nijor/reactivity';`);
 

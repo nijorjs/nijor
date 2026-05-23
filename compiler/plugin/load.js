@@ -1,7 +1,9 @@
 import { minifyHTML } from '../../utils/minify.js';
 import { runComponents } from './sandbox.js';
 
-export function nload({document, scope, scripts}) {
+export function nload({document, scope, scripts, module_type}) {
+
+    const bucket = module_type === "layout" ? "layout" : "page";
 
     document.querySelectorAll("[n:load]").forEach((element, index) => {
         let [variable,loader] = element.getAttribute('n:load').split(':');
@@ -30,7 +32,7 @@ export function nload({document, scope, scripts}) {
 
         if(!$ok.hasAttribute('loop') && !$loop)
         scripts.global += `
-            window.eventStorage['${functionID}'] = async function(){
+            window.nijor.bucket.${bucket}['${functionID}'] = async function(){
                 const range_${scope} = document.createRange();
                 const div${scope} = document.getElementById('${functionID}');
                 ${vars_inside_template}
@@ -52,7 +54,7 @@ export function nload({document, scope, scripts}) {
 
         if($ok.hasAttribute('loop'))
         scripts.global += `
-            window.eventStorage['${functionID}'] = async function (){
+            window.nijor.bucket.${bucket}['${functionID}'] = async function (){
                 const range_${scope} = document.createRange();
                 const div${scope} = document.getElementById('${functionID}');
                 ${vars_inside_template}
@@ -80,7 +82,7 @@ export function nload({document, scope, scripts}) {
             parentElement.replaceChild(document.createComment(loopID),$loop);
 
             scripts.global += `
-                window.eventStorage['${functionID}'] = async function (){
+                window.nijor.bucket.${bucket}['${functionID}'] = async function (){
                     const range_${scope} = document.createRange();
                     const div${scope} = document.getElementById('${functionID}');
                     ${vars_inside_template}
@@ -106,7 +108,7 @@ export function nload({document, scope, scripts}) {
 
         scripts.defer += `
         // @ommit:start
-        await window.eventStorage['${functionID}']();
+        await window.nijor.bucket.${bucket}['${functionID}']();
         // @ommit:end
         `;
 
@@ -123,12 +125,12 @@ export function nload({document, scope, scripts}) {
                 vars_inside_template += `let ${attr} = div${scope}.getAttribute("data-attr-${attr}") || "{${attr}}";`;
             });
 
-            scripts.global += `window.eventStorage['${functionID}-reload'] = async function() {
+            scripts.global += `window.nijor.bucket.${bucket}['${functionID}-reload'] = async function() {
                 const div${scope} = document.getElementById('${functionID}');
                 ${vars_inside_template}
                 div${scope}.innerHTML=\`${minifyHTML($loading.innerHTML)}\`;
                 ${$loading_run}
-                await window.eventStorage['${functionID}']();
+                await window.nijor.bucket.${bucket}['${functionID}']();
             };`;
         }
 

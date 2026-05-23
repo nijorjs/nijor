@@ -1,11 +1,57 @@
-import { appendFile } from 'fs/promises';
-import cssnano from "cssnano";
-import postcss from "postcss";
-import nested from "postcss-nested";
-import combineDuplicated from "postcss-combine-duplicated-selectors";
-import autoprefixer from "autoprefixer";
+import { writeFile } from 'fs/promises';
+import { existsSync } from 'fs';
+import * as path from 'path';
+import { createRequire } from 'module';
+import postcss from 'postcss';
+import nested from 'postcss-nested';
+import cssnano from 'cssnano';
+import autoprefixer from 'autoprefixer';
 
-function AddScope(scope) {
+let collectedCSS = '';
+
+export function reset() {
+    collectedCSS = '';
+}
+
+async function loadPostCSSConfig(configPath) {
+    if (!existsSync(configPath)) return { plugins: [] };
+
+    try {
+        const config = await import(configPath);
+        const { plugins = {} } = config.default ?? config;
+
+        if (Array.isArray(plugins)) return { plugins };
+        const require = createRequire(configPath);
+        const resolved = Object.entries(plugins).map(([name, opts]) => {
+            const plugin = require(name);
+            return plugin(opts);
+        });
+
+        return { plugins: resolved };
+    } catch (e) {
+        console.warn(`[nijor] postcss.config.mjs error : ${e.message}`);
+        return { plugins: [] };
+    }
+}
+
+export async function write(stylesheetPath, RootPath, dev) {
+    const configPath = path.join(RootPath, 'postcss.config.mjs');
+    const userConfig = await loadPostCSSConfig(configPath);
+
+    const plugins = [
+        nested(),
+        autoprefixer(),
+        ...userConfig.plugins,
+        ...(dev ? [] : [cssnano({ preset: 'default' })]) // Only minify in production mode
+    ].filter(Boolean);
+
+    const { css } = await postcss(plugins).process(collectedCSS, { from: undefined });
+
+    await writeFile(stylesheetPath, css);
+    collectedCSS = '';
+}
+
+function AddScopePlugin(scope) {
     return {
         postcssPlugin: 'n-scope',
         Rule(rule) {
@@ -38,7 +84,6 @@ function AddScope(scope) {
                         }
 
                         if (/^[a-zA-Z0-9._#\[]/.test(sub)) {
-                            // Prevent duplicate scope
                             if (sub.includes(`[n-scope="${scope}"]`)) {
                                 return sub;
                             }
@@ -53,35 +98,24 @@ function AddScope(scope) {
     };
 }
 
-export async function ModifyCSS(css, scope) {
-    let plugins = [
-        nested(),
-        scope ? AddScope(scope) : null,
-        combineDuplicated(),
-        autoprefixer(),
-        cssnano()
-    ].filter(Boolean);
-
-    let { css: modifiedCSS } = await postcss(plugins).process(css, {
-        from: undefined
-    });
-
-    return modifiedCSS;
+async function addScope(css_string, scope) {
+    const { css } = await postcss([AddScopePlugin(scope)]).process(css_string, { from: undefined });
+    return css;
 }
 
-export async function WriteStyleSheet(document, scope, options) {
+export async function WriteStyleSheet(document, scope) {
     for (const styleTag of document.querySelectorAll('nijor-style')) {
-        let theme = styleTag.getAttribute('theme') || "normal";
-
-        let CSS = await ModifyCSS(styleTag.innerHTML, scope);
+        const theme = styleTag.getAttribute('theme') || "normal";
+        const css = await addScope(styleTag.innerHTML, scope);
 
         if (theme === "normal") {
-            await appendFile(options.stylesheetPath, CSS);
+            collectedCSS += css;
         } else {
-            await appendFile(
-                options.stylesheetPath,
-                await ModifyCSS(`body[theme="${theme}"]{${CSS}}`)
-            );
+            collectedCSS += `body[theme="${theme}"]{${css}}`;
         }
     }
+}
+
+export function global(css) {
+    collectedCSS = css + collectedCSS;
 }

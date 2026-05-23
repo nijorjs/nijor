@@ -10,17 +10,17 @@ function getElementsWithOnEventAttributes(doc) {
 
 let registeredFunctions = [];
 
-function registerGlobalFunction(funcExpr, scope) {
+function registerGlobalFunction(funcExpr, scope, bucket) {
     const match = funcExpr.match(/(\w+)\s*\(/);
     if (!match) return '';
     const name = match[1];
     const marker = `${name}@${scope}`
     if(registeredFunctions.includes(`${marker}`)) return '';
     registeredFunctions.push(`${name}@${scope}`);
-    return `window.eventStorage['${marker}'] = ${name};`;
+    return `window.nijor.bucket.${bucket}['${marker}'] = ${name};`;
 }
 
-function registerFunction(funcExpr, scope) {
+function registerFunction(funcExpr, scope, bucket) {
     const isAwait = /^\s*await\s+/.test(funcExpr);
     const cleanExpr = funcExpr.replace(/^\s*await\s+/, '');
     const match = cleanExpr.match(/(\w+)\s*\((.*?)\)/);
@@ -33,19 +33,15 @@ function registerFunction(funcExpr, scope) {
     if(registeredFunctions.includes(`${marker}`)) return '';
     registeredFunctions.push(marker);
 
-    return `
-if(!window.eventStorage[\`${marker}\`]) 
-window.eventStorage[\`${marker}\`] = ${wrapper}`;
+    return `window.nijor.bucket.${bucket}[\`${marker}\`] = ${wrapper}`;
 }
 
-function rewriteCall(fnCall, scope, isStateFunction = false) {
+function rewriteCall(fnCall, scope, isStateFunction = false, bucket) {
     return fnCall.replace(
         /(\breturn\s*\(?\s*)?(await\s*)?(\w+)\s*\(/,
         (_, returnPrefix = '', awaitPrefix = '', name) => {
-            const key = isStateFunction
-                ? `${name}@${scope}:\${$id}`
-                : `${name}@${scope}`;
-            return `${returnPrefix}${awaitPrefix}window.eventStorage['${key}'](`;
+            const key = isStateFunction ? `${name}@${scope}:\${$id}` : `${name}@${scope}`;
+            return `${returnPrefix}${awaitPrefix}window.nijor.bucket.${bucket}['${key}'](`;
         }
     );
 }
@@ -200,9 +196,10 @@ function extractFunction(code, functionName) {
     return { extracted, remainder };
 }
 
-export default function ({ document, scope, scripts }) {
+export default function ({ document, scope, module_type, scripts }) {
     getElementsWithOnEventAttributes(document).forEach(el => {
         const events = el.getAttributeNames().filter(a => a.startsWith('on:'));
+        const bucket = module_type === "layout" ? "layout" : "page";
 
         events.forEach(attr => {
             const handler = el.getAttribute(attr);
@@ -217,12 +214,12 @@ export default function ({ document, scope, scripts }) {
 
             const isStateFunction = hasStateAsLastParam(scripts.global, fnName);
 
-            const rewrittenCall = rewriteCall(handler, scope, isStateFunction);
+            const rewrittenCall = rewriteCall(handler, scope, isStateFunction, bucket);
 
             if (isStateFunction) {
-                scripts.main += registerFunction(handler, scope);
+                scripts.main += registerFunction(handler, scope, bucket);
             } else {
-                scripts.global += registerGlobalFunction(handler, scope);
+                scripts.global += registerGlobalFunction(handler, scope, bucket);
             }
 
             el.setAttribute(attr.replace('on:', 'on'), rewrittenCall);

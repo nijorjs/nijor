@@ -1,0 +1,12 @@
+{
+    "type": "module",
+    "private":true,
+    "scripts": {
+        "dev": "nijor dev",
+        "build": "nijor build"
+    },
+    "dependencies": {
+        "@tailwindcss/postcss": "^4.3.0",
+        "tailwindcss": "^4.3.0"
+    }
+}
