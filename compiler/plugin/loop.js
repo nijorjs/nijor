@@ -1,6 +1,6 @@
 import { minifyHTML } from '../../utils/minify.js';
 import uniqeid from '../../utils/uniqeid.js';
-import { runComponents, getAllComponents } from './sandbox.js';
+import { runComponents, getAllComponents, addDepenencies } from './sandbox.js';
 
 export function loop({ document, scope, scripts, module_type }) {
 
@@ -35,7 +35,7 @@ export function loop({ document, scope, scripts, module_type }) {
                     const identifier = `\${$id}${rvar}${uniqeid(3,4)}`;
                     el.classList.add(identifier);
                     scripts.main += `
-                        $.$subscribe('${rvar}',()=>{
+                        __${scope}__.subscribe('${rvar}',()=>{
                             [...document.getElementsByClassName(\`${identifier}\`)]?.forEach((e${scope},i${scope})=>{
                                 const ${variable} = ${source}[i${scope}];
                                 if(${condition}) e${scope}?.classList.add('${classname}');
@@ -63,54 +63,54 @@ export function loop({ document, scope, scripts, module_type }) {
             ${$run_components}
             `;
 
-            scripts.main += ` $.$subscribe('${source.replace('$.','')}',async ()=>{${reload_code}});`;
+            scripts.main += ` __${scope}__.subscribe('${source.replace('$.','')}',async ()=>{${reload_code}});`;
         }
 
-        if(raw_source.startsWith('@')){
+        // if(raw_source.startsWith('@')){
 
-            const code = `\${${source}.map(function(${variable},index${scope}){return \`<!--\${${variable}._id}-->${template}<!--/\${${variable}._id}-->\`;}).join("")}`;
-            element.innerHTML = code;
+        //     const code = `\${${source}.map(function(${variable},index${scope}){return \`<!--\${${variable}._id}-->${template}<!--/\${${variable}._id}-->\`;}).join("")}`;
+        //     element.innerHTML = code;
 
-            const $var = raw_source.replace('@','');
+        //     const $var = raw_source.replace('@','');
 
-            scripts.global += `
-                ${$var}.subscribe(async c${scope}=>{
-                    const Block_${scope} = document?.getElementById("${loopID}");
-                    if(!Block_${scope}) return;
-                    // \${getAttributes_reload};
+        //     scripts.global += `
+        //         ${$var}.subscribe(async c${scope}=>{
+        //             const Block_${scope} = document?.getElementById("${loopID}");
+        //             if(!Block_${scope}) return;
+        //             // \${getAttributes_reload};
 
-                    if(c${scope}.operation == "insert"){
-                        c${scope}.elements.forEach(x${scope}=>{
-                            const ${variable} = x${scope};
-                            const index${scope} = ${$var}.value.length;
-                            const fragment${scope} = document.createRange().createContextualFragment(\`<!--\${${variable}._id}-->${template}<!--/\${${variable}._id}-->\`);
-                            Block_${scope}.appendChild(fragment${scope});
-                        });
-                        ${$run_components}
-                    }
+        //             if(c${scope}.operation == "insert"){
+        //                 c${scope}.elements.forEach(x${scope}=>{
+        //                     const ${variable} = x${scope};
+        //                     const index${scope} = ${$var}.value.length;
+        //                     const fragment${scope} = document.createRange().createContextualFragment(\`<!--\${${variable}._id}-->${template}<!--/\${${variable}._id}-->\`);
+        //                     Block_${scope}.appendChild(fragment${scope});
+        //                 });
+        //                 ${$run_components}
+        //             }
                     
-                    if(c${scope}.operation == "delete"){
-                        c${scope}.elements.forEach(x${scope}=>{
-                            const nodes_${scope} = $comment_${scope}(x${scope},Block_${scope});
-                            if (nodes_${scope} && nodes_${scope}.length > 0) {
-                                const range_${scope} = document.createRange();
-                                range_${scope}.setStartBefore(nodes_${scope}[0]);
-                                range_${scope}.setEndAfter(nodes_${scope}[nodes_${scope}.length - 1]);
-                                range_${scope}.deleteContents();
-                            }
-                        });
-                    }
+        //             if(c${scope}.operation == "delete"){
+        //                 c${scope}.elements.forEach(x${scope}=>{
+        //                     const nodes_${scope} = $comment_${scope}(x${scope},Block_${scope});
+        //                     if (nodes_${scope} && nodes_${scope}.length > 0) {
+        //                         const range_${scope} = document.createRange();
+        //                         range_${scope}.setStartBefore(nodes_${scope}[0]);
+        //                         range_${scope}.setEndAfter(nodes_${scope}[nodes_${scope}.length - 1]);
+        //                         range_${scope}.deleteContents();
+        //                     }
+        //                 });
+        //             }
 
-                    if(c${scope}.operation == "rewrite"){
-                        const fragment${scope} = document.createRange().createContextualFragment(\`${code}\`);
-                        Block_${scope}.replaceChildren(fragment${scope});
-                        ${$run_components}
-                    }
-                });
-            `;
-        }
+        //             if(c${scope}.operation == "rewrite"){
+        //                 const fragment${scope} = document.createRange().createContextualFragment(\`${code}\`);
+        //                 Block_${scope}.replaceChildren(fragment${scope});
+        //                 ${$run_components}
+        //             }
+        //         });
+        //     `;
+        // }
 
-        scripts.defer += $run_components;
+        scripts.global += addDepenencies(element, scope);
 
     });
 

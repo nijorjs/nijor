@@ -40,14 +40,10 @@ export default async function (__dirname) {
     global.serverCodeMap = new Map();
     global.serverParamsMap = new Map();
 
-    start = performance.now();
     await Build(RootPath, eventEmitter);
 
     eventEmitter.on('pages-built', async () => {
-        let end = performance.now();
-        console.log(`Created Static Pages in ${(end - start).toFixed(2)}ms`);
 
-        start = performance.now();
         let serverCode = await fs.promises.readFile(path.join(__dirname, 'ssr/server.js'), 'utf-8');
         serverCode = serverCode.replaceAll('/*--seed--*/', process.seed);
         serverCode = serverCode.replace('//@Routes', global.serverRoutesCode);
@@ -57,9 +53,6 @@ export default async function (__dirname) {
         await bundle(tmpFile);
         await fs.promises.rm(tmpFile);
 
-        end = performance.now();
-
-        console.log(`Created server.js in ${(end - start).toFixed(2)}ms`);
         console.log('Project Built successfully !');
     });
 

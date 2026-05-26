@@ -3,7 +3,6 @@
 import path from 'path';
 import { readFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
-import createProject from './create.js';
 import buildProject from './build.js';
 import devServer from './dev-server.js';
 
@@ -23,19 +22,17 @@ process.quitProgram = (msg, [r = 256, g = 256, b = 256]) => {
 const userArgs = process.argv.slice(2);
 
 const commandsMap = {
-    "create": () => createProject(cwDir, __dirname, userArgs.slice(1)),
     "build": () => buildProject(__dirname),
-    "dev": () => devServer(),
+    "dev": () => devServer(pkg.version),
     "-v": () => console.log(`v${pkg.version}`),
     "default": () => DefaultCommand()
 }
 
 function DefaultCommand() {
     const command = userArgs[0];
-    if (!!!command) console.print("Welcome to the Nijor CLI !\n", [0, 195, 255]);
+    if (!!!command) console.print(`Nijor v${pkg.version} !\n`, [0, 195, 255]);
     if (command) console.log(`"${highlight(command, [255, 251, 14])}" is not recognized by the ${highlight('Nijor CLI', [0, 195, 255])} ! \n`);
     console.log(`The following commands are available :`);
-    console.log(`   ${highlight('create', [255, 251, 14])} : For creating a new project`);
     console.log(`   ${highlight('build', [255, 251, 14])} : For building a project in production mode`);
     console.log(`   ${highlight('dev', [255, 251, 14])} : For starting the dev server`);
     console.log(`   ${highlight('-v', [255, 251, 14])} : To check version \n`);

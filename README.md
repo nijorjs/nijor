@@ -2,7 +2,7 @@
 ![Nijor](./logo.svg)
 
 *Nijor : A modern & modular web framework !* <br>
-See [Docs](https://nijorjs.github.io).
+See [Docs](https://nijor.dev).
 
 ## License
 MIT © 2026 Deb Axom

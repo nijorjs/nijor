@@ -2,101 +2,121 @@ import http from 'http';
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
+import chokidar from 'chokidar';
 import { WebSocketServer } from 'ws';
 import EventEmitter from 'events';
 import { Compile } from '../compiler/index.js';
 
-const highlight = (text, [r, g, b]) => `\x1b[38;2;${r};${g};${b}m${text}\x1b[0m`;
-
 const rootDir = process.cwd();
 const srcDir = path.join(rootDir, 'src');
+const assetsDir = path.join(rootDir, 'assets');
+const indexPath = path.join(rootDir, 'index.html');
 
-export default async function () {
-    await loadEnv();
-    
-    const assetsDir = path.join(rootDir, 'assets');
+const mimeTypes = {
+    '.html': 'text/html;charset=utf-8',
+    '.css': 'text/css',
+    '.js': 'text/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.mp4': 'video/mp4',
+    '.webm': 'video/webm',
+    '.ogg': 'video/ogg',
+    '.pdf': 'application/pdf',
+    '.txt': 'text/plain',
+    '.xml': 'application/xml',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf'
+};
 
-    const mimeTypes = {
-        '.html': 'text/html',
-        '.css': 'text/css',
-        '.js': 'text/javascript',
-        '.json': 'application/json',
-        '.png': 'image/png',
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.svg': 'image/svg+xml',
-        '.ico': 'image/x-icon',
-        '.mp4': 'video/mp4',
-        '.webm': 'video/webm',
-        '.ogg': 'video/ogg',
-        '.pdf': 'application/pdf',
-        '.txt': 'text/plain',
-        '.xml': 'application/xml',
-        '.woff': 'font/woff',
-        '.woff2': 'font/woff2',
-        '.ttf': 'font/ttf'
+/* ------------------------- Utils ------------------------- */
+
+const highlight = (text, [r, g, b]) => `\x1b[38;2;${r};${g};${b}m${text}\x1b[0m`;
+
+function getLocalIpAddress() {
+    const nets = os.networkInterfaces();
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            const isIPv4 = typeof net.family === 'string' ? net.family === 'IPv4' : net.family === 4;
+            if (isIPv4 && !net.internal) return net.address;
+        }
+    }
+    return null;
+}
+
+/* ------------------------- Live Reload ------------------------- */
+
+function injectLiveReload(html, port, enabled) {
+    if (!enabled) return html;
+
+    return html.replace(
+        /<head>/,
+        `<head><script>
+        const ws = new WebSocket(\`ws://\${location.hostname}:${port}\`);
+        ws.onmessage = e => e.data === 'reload' && location.reload();
+        ws.onclose = () => {
+            const retry = () => {
+                const ws = new WebSocket(\`ws://\${location.hostname}:${port}\`);
+                ws.onopen = () => location.reload();
+                ws.onerror = () => setTimeout(retry, 2000);
+            };
+            retry();
+        };
+        </script>`
+    );
+}
+
+/* ------------------------- Middleware ------------------------- */
+
+const middlewares = [];
+
+function use(fn) {
+    middlewares.push(fn);
+}
+
+async function runMiddlewares(req, res, handler) {
+    let i = 0;
+
+    const next = async () => {
+        if (i < middlewares.length) {
+            await middlewares[i++](req, res, next);
+        } else {
+            await handler();
+        }
     };
 
+    await next();
+}
+
+/* ------------------------- Server ------------------------- */
+
+export default async function (version) {
+    await loadEnv();
+
     const nijor_config = await import(path.join(rootDir, 'nijor.config.js'));
-    const hostname = '0.0.0.0';
     const port = nijor_config.server.port;
-
-    function InjectLiveServerCode(text) {
-        if (!nijor_config.server.live_reload) return text;
-        return text.replace(/<head>/, `<head><script>
-        const ws = new WebSocket(\`ws://\${location.hostname}:${port}\`);
-        ws.onmessage = (event) => {
-            if (event.data === 'reload') {
-                window.location.reload();
-            }
-        };
-        ws.onclose = () => {
-            console.log('Server is down. Waiting for it to come back online...');
-            checkServerAndReload();
-        };
-        function checkServerAndReload() {
-            const tempWs = new WebSocket(\`ws://\${location.hostname}:${port}\`);
-            tempWs.onopen = () => {
-                tempWs.close();
-                window.location.reload();
-            };
-            tempWs.onerror = () => {
-                setTimeout(checkServerAndReload, 3000);
-                tempWs.close();
-            };
-        }
-        </script>`);
-    }
-
-    const middlewares = [cookieMiddleware];
-
-    function use(fn) {
-        middlewares.push(fn);
-    }
-
-    async function runMiddlewares(req, res, finalHandler) {
-        let i = -1;
-
-        const next = async () => {
-            i++;
-            if (i < middlewares.length) {
-                await middlewares[i](req, res, next);
-            } else {
-                await finalHandler();
-            }
-        };
-
-        await next();
-    }
+    const hostname = '0.0.0.0';
 
     const headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'OPTIONS, POST, GET',
+        'Access-Control-Allow-Methods': 'OPTIONS, POST, GET'
     };
 
-    const indexPath = path.join(rootDir, 'index.html');
+    if (nijor_config.middlewares) {
+        nijor_config.middlewares.forEach(mw => {
+            if (typeof mw !== 'function') {
+                console.warn('[Nijor] Middleware must be a function');
+                return;
+            }
+            use(mw);
+        });
+    }
 
     const server = http.createServer(async (req, res) => {
         try {
@@ -108,194 +128,126 @@ export default async function () {
                 }
 
                 const requestPath = decodeURIComponent(req.url.split('?')[0]);
-                const assetPath = path.join(assetsDir, requestPath);
+                const filePath = path.join(assetsDir, requestPath);
 
-                if (fs.existsSync(assetPath)) {
-                    const stat = await fs.promises.stat(assetPath);
+                /* ---------- Serve static assets ---------- */
+                if (fs.existsSync(filePath)) {
+                    const stat = await fs.promises.stat(filePath);
+
                     if (stat.isFile()) {
-                        const etag = `W/"${stat.size}-${stat.mtimeMs}"`; // Weak Etag
-                        if (req.headers["if-none-match"] === etag) {
-                            res.writeHead(304);
-                            res.end();
-                            return true;
-                        }
+                        const ext = path.extname(filePath);
+                        const mime = mimeTypes[ext] || 'application/octet-stream';
 
-                        const ext = path.extname(assetPath);
-                        const mimeType = mimeTypes[ext] || 'application/octet-stream';
-                        const content = await fs.promises.readFile(assetPath);
+                        const content = await fs.promises.readFile(filePath);
+
                         res.writeHead(200, {
                             ...headers,
-                            'Content-Type': mimeType,
+                            'Content-Type': mime,
                             'Content-Length': Buffer.byteLength(content),
-                            "Cache-Control": "public, max-age=0",
-                            "ETag": etag
                         });
-                        res.end(content);
-                        return;
+
+                        return res.end(content);
                     }
                 }
 
-                // Serve the index.html file for all routes
-                const content = InjectLiveServerCode(await fs.promises.readFile(indexPath, 'utf-8'));
+                /* ---------- Fallback: index.html ---------- */
+                let html = await fs.promises.readFile(indexPath, 'utf-8');
+                html = injectLiveReload(html, port, nijor_config.server.live_reload);
+
                 res.writeHead(200, headers);
-                res.end(content);
-                return;
+                res.end(html);
             });
 
         } catch (err) {
             console.error(err);
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('500 Internal Server Error');
+            res.writeHead(500);
+            res.end('Internal Server Error');
         }
     });
 
-    if (nijor_config.middlewares) {
-        nijor_config.middlewares?.forEach(middleware => use(middleware));
-    }
-
-    // export default async function () {
-
-    const IP_Addr = getLocalIpAddress();
-
-    if (!fs.existsSync(path.join(rootDir, 'nijor.config.js'))) process.quitProgram(`Can't find 'nijor.config.js' in ${rootDir}`, [255, 0, 0]);
+    /* ------------------------- WebSocket ------------------------- */
 
     const wss = new WebSocketServer({ server });
-    const eventEmitter = new EventEmitter();
+    const emitter = new EventEmitter();
 
-    server.listen(port, hostname, () => {
-        console.print(`Nijor`, [0, 195, 255]);
-        console.log(`Local : http://localhost:${port}`);
-        if (IP_Addr) console.log(`Network : http://${IP_Addr}:${port}`);
-        if (nijor_config.live_reload) console.log(`Live Reload ${highlight('enabled', [76, 243, 16])} ; looking for changes in ${highlight('src/', [76, 243, 16])}`);
-    });
-
-    try {
-        await Compile({ dev: true });
-    } catch (error) {
-        console.log(error);
-    }
-
-    // fs.watch(srcDir, { recursive: true }, async (eventType, filename) => {
-    //     if (eventType === 'change') {
-    //         await recompile(eventEmitter);
-    //         return;
-    //     }
-    // });
-
-    startWatching(eventEmitter);
-
-    eventEmitter.on('compiled', async _ => {
+    emitter.on('compiled', () => {
         wss.clients.forEach(client => {
             if (client.readyState === 1) {
                 client.send('reload');
             }
         });
     });
-}
 
-function cookieMiddleware(req, res, next) {
+    /* ------------------------- Compile System ------------------------- */
 
-    function parseCookies(cookieHeader) {
-        const cookies = new Map();
-        if (!cookieHeader) return cookies;
+    let compiling = false;
+    let pending = false;
+    let debounceTimer;
 
-        cookieHeader.split(";").forEach(cookie => {
-            const [key, ...val] = cookie.trim().split("=");
-            cookies.set(key, decodeURIComponent(val.join("=")));
+    async function triggerCompile() {
+        if (compiling) {
+            pending = true;
+            return;
+        }
+
+        compiling = true;
+
+        try {
+            const start = performance.now();
+            await Compile({ dev: true });
+            const end = performance.now();
+
+            console.log(`Compiled in ${(end - start).toFixed(2)}ms`);
+            emitter.emit('compiled');
+        } catch (err) {
+            console.error(err);
+        }
+
+        compiling = false;
+
+        if (pending) {
+            pending = false;
+            triggerCompile();
+        }
+    }
+
+    /* ------------------------- Watcher (FIXED) ------------------------- */
+
+    function startWatcher() {
+        const watcher = chokidar.watch(srcDir, {
+            ignoreInitial: true,
         });
 
-        return cookies;
+        watcher.on('all', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(triggerCompile, 50);
+        });
     }
 
-    const parsedCookies = parseCookies(req.headers.cookie);
-    const setCookieHeaders = [];
+    /* ------------------------- Start ------------------------- */
 
-    req.cookies = {
-        get(name) {
-            return parsedCookies.get(name);
-        },
+    const ip = getLocalIpAddress();
 
-        set(name, value, options = {}) {
-            let cookie = `${name}=${encodeURIComponent(value)}`;
+    server.listen(port, hostname, () => {
+        console.print(`Nijor v${version}`, [0, 195, 255]);
+        console.log(`Local : http://localhost:${port}`);
+        if (ip) console.log(`Network : http://${ip}:${port}`);
+        if (nijor_config.server.live_reload) console.log(`Live Reload ${highlight('enabled', [76, 243, 16])} ; looking for changes in ${highlight('src/', [76, 243, 16])}`);
+    });
 
-            if (options.maxAge) cookie += `; Max-Age=${options.maxAge}`;
-            if (options.expires) cookie += `; Expires=${options.expires.toUTCString()}`;
-            if (options.httpOnly) cookie += `; HttpOnly`;
-            if (options.secure) cookie += `; Secure`;
-            if (options.path) cookie += `; Path=${options.path}`;
-            if (options.sameSite) cookie += `; SameSite=${options.sameSite}`;
-
-            setCookieHeaders.push(cookie);
-        },
-
-        delete(name, options = {}) {
-            this.set(name, "", {
-                ...options,
-                expires: new Date(0)
-            });
-        }
-    }
-
-    const originalEnd = res.end;
-
-    res.end = function (...args) {
-        if (setCookieHeaders.length > 0) {
-            res.setHeader("Set-Cookie", setCookieHeaders);
-        }
-        return originalEnd.apply(res, args);
-    };
-
-    next();
+    await triggerCompile(); // initial build
+    startWatcher();
 }
+
+/* ------------------------- ENV ------------------------- */
 
 async function loadEnv() {
     const envPath = path.join(rootDir, '.env');
-    if (fs.existsSync(envPath)) {
-        const content = await fs.promises.readFile(envPath, 'utf-8');
-        content.split('\n').forEach(line => {
-            // Remove comments and trim whitespace
-            const [key, ...value] = line.split('=');
-            if (key && value.length > 0 && !key.startsWith('#')) {
-                const k = key.trim();
-                const v = value.join('=').trim().replace(/^["']|["']$/g, ''); // Remove quotes
-                process.env[k] = v;
-            }
-        });
-    }
-}
-
-let watcher;
-
-async function recompile(eventEmitter) {
-    try {
-        const start = performance.now();
-        await Compile({ dev: true });
-        const end = performance.now();
-        console.log(`Compiled in ${(end - start).toFixed(2)}ms`);
-        eventEmitter.emit('compiled');
-    } catch (error) {
-        console.log(error);
-    }
-}
-
-function startWatching(eventEmitter) {
-    watcher = fs.watch(srcDir, { recursive: true }, async (eventType, filename) => {
-        if (eventType == "change") await recompile(eventEmitter);
-        watcher.close();
-        startWatching(eventEmitter);
+    if (!fs.existsSync(envPath)) return;
+    const content = await fs.promises.readFile(envPath, 'utf-8');
+    content.split('\n').forEach(line => {
+        const [key, ...val] = line.split('=');
+        if (!key || !val.length || key.startsWith('#')) return;
+        process.env[key.trim()] = val.join('=').trim().replace(/^["']|["']$/g, '');
     });
-}
-
-function getLocalIpAddress() {
-    const nets = os.networkInterfaces();
-    for (const name of Object.keys(nets)) {
-        for (const net of nets[name]) {
-            // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-            const familyV4Value = typeof net.family === 'string' ? 'IPv4' : 4;
-            if (net.family === familyV4Value && !net.internal) {
-                return net.address;
-            }
-        }
-    }
-    return null;
 }

@@ -1,5 +1,5 @@
-import { cleanupFunctions, resetCleanup } from "./core.js";
-import { cleanCacheCommentNodes } from "./reactivity.js";
+import { Cleanup as CleanupLayout } from "./layout.js";
+import { Cleanup as CleanupPage } from "./page.js";
 
 const Routes = [];
 const Layouts = new Map();
@@ -33,7 +33,7 @@ function normalizeUrl(url, updateHistory = false) {
         history.replaceState(null, "", full);
     }
 
-    return pathname; // ⚠️ ONLY return pathname for routing
+    return pathname;
 }
 
 /* ---------------- TOKEN MATCHING ---------------- */
@@ -45,17 +45,14 @@ function matchSegment(tokens, segment) {
     for (let t = 0; t < tokens.length; t++) {
         const token = tokens[t];
 
-        // 🔹 LITERAL
         if (token.type === "literal") {
             if (!segment.startsWith(token.value, i)) return null;
             i += token.value.length;
         }
 
-        // 🔹 PARAM
         else if (token.type === "param") {
             const remaining = segment.slice(i);
 
-            // 🔑 Find next literal
             let nextLiteral = null;
 
             for (let j = t + 1; j < tokens.length; j++) {
@@ -76,7 +73,6 @@ function matchSegment(tokens, segment) {
                 value = remaining;
             }
 
-            // 🔒 Validate types
             if (token.kind === "int") {
                 if (!/^\d+$/.test(value)) return null;
             } else {
@@ -88,7 +84,6 @@ function matchSegment(tokens, segment) {
         }
     }
 
-    // Must consume entire segment
     if (i !== segment.length) return null;
 
     return params;
@@ -153,10 +148,11 @@ async function renderPage(route, importer, params) {
         }
         layoutPromise = loadLayout(layoutName, importLayout);
     }
-
+    
     const [Layout] = await Promise.all([layoutPromise]);
-
+    
     if (Layout) {
+        CleanupLayout();
         await Layout.render(window.nijor.root);
         window.nijor.layout = layoutName;
     }
@@ -213,7 +209,6 @@ export async function RenderRoute(url) {
         return true;
     }
 
-    // 👇 NEW: fallback to 404 chain
     return await render404(url);
 }
 
@@ -255,33 +250,6 @@ async function runRouteHooks(path) {
     );
 }
 
-function cleanBucket() {
-    for (const key of Object.keys(window.nijor.bucket)) {
-        const scope = key.split("@")[1];
-        if(scope && !document.querySelector(`[n-scope="${scope}"]`)){
-            delete window.nijor.bucket[key];
-        }
-    }
-}
-
-async function cleanup() {
-    cleanCacheCommentNodes();
-
-    if (cleanupFunctions.length === 0) return;
-
-    await Promise.all(
-        cleanupFunctions.map(fn => {
-            try {
-                return fn();
-            } catch (e) {
-                console.error(e);
-            }
-        })
-    );
-
-    resetCleanup();
-}
-
 async function navigate(path, replace = false) {
     const current = window.location.pathname + window.location.search + window.location.hash;
 
@@ -290,12 +258,11 @@ async function navigate(path, replace = false) {
         else history.pushState({ path }, "", path);
     }
 
-    await cleanup();
+    CleanupPage(path);
     await Promise.all([
         RenderRoute(path),
         runRouteHooks(path)
     ]);
-    if(window.nijor.bucket_size>25) cleanBucket();
 }
 
 window.nijor.redirect = (route, replace = false) => {
@@ -311,12 +278,11 @@ window.nijor.redirect = (route, replace = false) => {
 
 window.addEventListener("popstate", async () => {
     const path = window.location.pathname + window.location.search + window.location.hash;
-    await cleanup();
+    CleanupPage(path);
     await Promise.all([
         RenderRoute(path),
         runRouteHooks(path)
     ]);
-    if(window.nijor.bucket_size>25) cleanBucket();
 });
 
 window.nijor.initialRender = async (route) => {

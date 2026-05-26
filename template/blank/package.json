@@ -1,8 +1,0 @@
-{
-    "type": "module",
-    "private":true,
-    "scripts": {
-        "dev": "nijor dev",
-        "build": "nijor build"
-    }
-}

@@ -1,159 +1,186 @@
-import { minifyHTML, deepFixInterpolations } from '../../utils/minify.js';
+import { minifyHTML } from '../../utils/minify.js';
 import uniqueid from '../../utils/uniqeid.js';
 
+/* ------------------------- Helpers ------------------------- */
+
+const isComponent = (tag, scope) => tag.endsWith(`_${scope}`);
+
+const ensureId = (el, prefix = 'R') => {
+    if (el.id) return el.id;
+    const id = `${prefix}\${$id}${uniqueid(5, 7)}`;
+    el.id = id;
+    return id;
+};
+
+const addScript = (scripts, scope, code) => scripts.main += `\n${code}`;
+
+const subscribe = (scope, variable, code) => `__${scope}__.subscribe('${variable}',()=>${code});`;
+
+/* ------------------------- Reactive Attr Discovery ------------------------- */
+
 function getReactiveElements(document) {
-    // 1. Find all elements that have ANY attribute starting with "n:attr:"
-    // We use a tree walker or querySelectorAll('*') to check attribute names
-    const allElements = document.querySelectorAll('*');
-    const matches = [];
+    return [...document.querySelectorAll('*')].filter(el => {
+        const attrs = [...el.attributes].filter(a => a.name.startsWith('n:attr:')).map(a => a.name.slice(7));
 
-    allElements.forEach(el => {
-        const nAttrs = [];
+        if (!attrs.length) return false;
 
-        // Loop through attributes to find matches
-        for (const attr of el.attributes) {
-            if (attr.name.startsWith('n:attr:')) {
-                // Extract 'abc' from 'n:attr:abc'
-                nAttrs.push(attr.name.slice(7));
-            }
-        }
+        Object.defineProperty(el, 'r_attr', {
+            get: () => attrs,
+            configurable: true
+        });
 
-        if (nAttrs.length > 0) {
-            // 2. Attach the custom property 'r_attr' to this specific instance
-            Object.defineProperty(el, 'r_attr', {
-                get: () => nAttrs,
-                configurable: true
-            });
-            matches.push(el);
-        }
+        return true;
     });
-
-    return matches;
 }
 
-const isComponent = (tagName, scope) => tagName.endsWith(`_${scope}`);
+/* ------------------------- Component Handling ------------------------- */
 
-function handleComponent(reactive_attrs, element, scripts, scope) {
+function handleComponent(attrs, el, scripts, scope) {
     scripts.import.add(`import {reload as $reload_${scope}} from 'nijor/reactivity';`);
-    const _id = element.getAttribute('_id');
-    const component = element.tagName.toLowerCase();
-    for (const attr of reactive_attrs) {
-        let dependents = element.getAttribute(`n:attr:${attr}`).split(" ");
-        element.removeAttribute(`n:attr:${attr}`);
-        dependents.forEach(rvar => {
-            scripts.main += `$.$subscribe('${rvar}',()=> $reload_${scope}('${_id}',$${component},'${component}',\`${element.outerHTML}\`));`;
-        });
-    }
-    element.outerHTML = `<!--${_id}-->${element.outerHTML}<!--/${_id}-->`;
-}
 
-function getReactiveClasses(document) {
-    return [...document.querySelectorAll('*')]
-        .filter(el => [...el.attributes].some(attr => attr.name.startsWith('class:')))
-        .map(el => {
-            const attr = [...el.attributes].find(attr => attr.name.startsWith('class:'));
-            el.classname = attr.name.slice('class:'.length);
-            return el;
+    const id = el.getAttribute('_id');
+    const name = el.tagName.toLowerCase();
+
+    attrs.forEach(attr => {
+        const deps = el.getAttribute(`n:attr:${attr}`).split(" ");
+        el.removeAttribute(`n:attr:${attr}`);
+        deps.forEach(v => addScript(scripts, scope, subscribe(scope, v, `$reload_${scope}('${id}',$${name},'${name}',\`${el.outerHTML}\`)`)));
     });
+
+    el.outerHTML = `<!--${id}-->${el.outerHTML}<!--/${id}-->`;
 }
 
-export function reactive({ document, scope, scripts, module_type }) {
+/* ------------------------- n:var ------------------------- */
 
-    // Handling reactive variables inside tags
-    document.querySelectorAll('[n\\:var]').forEach(element => {
-        const vars = element.getAttribute('n:var').split(" ");
-        const id = element.id || `\${$id}${uniqueid(5, 7)}`;
-        const template_str = minifyHTML(element.innerHTML);
-        if (!element.id) element.id = id;
-        element.removeAttribute('n:var');
+function handleVars(document, scripts, scope) {
+    document.querySelectorAll('[n\\:var]').forEach(el => {
+        const vars = el.getAttribute('n:var').split(" ");
+        const id = ensureId(el, '');
+        const template = minifyHTML(el.innerHTML);
+
+        el.removeAttribute('n:var');
+
         vars.forEach(v => {
-            if (element.tagName.toLowerCase() == "textarea")
-                scripts.main += ` $.$subscribe('${v}',()=> document.getElementById(\`${id}\`).value = \`${template_str}\`);`;
-            else
-                scripts.main += ` $.$subscribe('${v}',()=> document.getElementById(\`${id}\`).innerHTML = \`${template_str}\`);`;
+            const target = el.tagName.toLowerCase() === 'textarea' ? `.value` : `.innerHTML`;
+            addScript(scripts, scope, subscribe(scope, v, `document.getElementById(\`${id}\`)${target} = \`${template}\``));
         });
-
     });
+}
 
-    // Handling reactive variables inside attributes
-    getReactiveElements(document).forEach(element => {
+/* ------------------------- n:attr ------------------------- */
 
-        if (isComponent(element.tagName.toLowerCase(), scope)) return handleComponent(element.r_attr, element, scripts, scope);
-
-        const id = element.id || `R\${$id}${uniqueid(5, 7)}`;
-        if (!element.id) element.id = id;
-        const reactive_attrs = element.r_attr;
-
-        for (const attr of reactive_attrs) {
-            let dependents = element.getAttribute(`n:attr:${attr}`).split(" ");
-            let value = element.getAttribute(attr);
-            element.removeAttribute(`n:attr:${attr}`);
-
-            dependents.forEach(rvar => {
-                if (attr.includes(":") || attr.includes(".") || attr.includes("-")) return;
-                scripts.main += ` $.$subscribe('${rvar}',()=>document.getElementById(\`${id}\`).${attr} = \`${value}\`);`;
-            });
+function handleReactiveAttributes(document, scripts, scope) {
+    getReactiveElements(document).forEach(el => {
+        if (isComponent(el.tagName.toLowerCase(), scope)) {
+            return handleComponent(el.r_attr, el, scripts, scope);
         }
-    });
 
-    // Handling reactive classes
-    document.querySelectorAll('[n\\:rclasses]').forEach(element => {
-        const classes = element.getAttribute('n:rclasses').split(' ');
-        const id = element.id || `R\${$id}${uniqueid(5, 7)}`;
-        if (!element.id) element.id = id;
-        element.removeAttribute('n:rclasses');
+        const id = ensureId(el);
 
-        classes.forEach(classname => {
-            const dependents = element.getAttribute(`n:rclass:${classname}`).split(' ');
-            const condition = element.getAttribute(`n:rclass:${classname}:condition`);
+        el.r_attr.forEach(attr => {
+            const deps = el.getAttribute(`n:attr:${attr}`).split(" ");
+            const value = el.getAttribute(attr);
 
-            element.removeAttribute(`n:rclass:${classname}`);
-            element.removeAttribute(`n:rclass:${classname}:condition`);
+            el.removeAttribute(`n:attr:${attr}`);
 
-            dependents.forEach(rvar => {
-
-                scripts.main += `
-          $.$subscribe('${rvar}',()=>{
-            const e${scope} = document.getElementById(\`${id}\`); 
-            if(${condition}) e${scope}?.classList.add('${classname}');
-            else e${scope}?.classList.remove('${classname}');
-          });
-        `;
+            deps.forEach(v => {
+                if (/[.: -]/.test(attr)) return;
+                addScript(scripts, scope, subscribe(scope, v, `document.getElementById(\`${id}\`).${attr} = \`${value}\``));
             });
 
         });
-
     });
+}
 
-    // Handling bindings on inputs, textarea, contenteditable
-    document.querySelectorAll("[n:bind]").forEach((element, index) => {
-        const id = element.id || `R${$id}${uniqueid(5, 7)}`;
-        if (!element.id) element.id = id;
-        const tagName = element.tagName.toLowerCase();
-        if (tagName == "input" || tagName == "textarea" || tagName == "select" || element.getAttribute("contenteditable") == "true") {
-            const variable = element.getAttribute("n:bind").trim().slice(3, -1);
-            const value = (tagName == "input" || tagName == "textarea" || tagName == "select") ? "value" : "innerText";
-            const fnName = `${variable}${index}@${scope}`;
-            scripts.main += `window.nijor.bucket['${fnName}'] = function(){ $.${variable} = document.getElementById(\`${id}\`).${value}; }; window.nijor.bucket_size++; `;
-            element.setAttribute("oninput", `window.nijor.bucket['${fnName}']()`);
-        }
-        element.removeAttribute("n:bind");
+/* ------------------------- Reactive Classes ------------------------- */
+
+function handleClasses(document, scripts, scope) {
+    document.querySelectorAll('[n\\:rclasses]').forEach(el => {
+        const id = ensureId(el);
+        const classes = el.getAttribute('n:rclasses').split(' ');
+
+        el.removeAttribute('n:rclasses');
+
+        classes.forEach(cls => {
+            const deps = el.getAttribute(`n:rclass:${cls}`).split(' ');
+            const condition = el.getAttribute(`n:rclass:${cls}:condition`);
+
+            el.removeAttribute(`n:rclass:${cls}`);
+            el.removeAttribute(`n:rclass:${cls}:condition`);
+
+            deps.forEach(v => {
+                addScript(
+                    scripts,
+                    scope,
+                    `
+__${scope}__.subscribe('${v}',()=>{
+  const el = document.getElementById(\`${id}\`);
+  if(${condition}) el?.classList.add('${cls}');
+  else el?.classList.remove('${cls}');
+});`
+                );
+            });
+        });
     });
+}
 
+/* ------------------------- Bindings ------------------------- */
 
-    document.querySelectorAll("[n:ref]").forEach(element => {
-        const id = element.id || `R\${$id}${uniqueid(5, 7)}`;
-        if (!element.id) element.id = id;
-        const variable = element.getAttribute("n:ref").trim().slice(3, -1);
-        scripts.defer += `$.${variable} = document.getElementById(\`${id}\`); `;
-        element.removeAttribute('n:ref');
+function handleBindings(document, scripts, scope) {
+    document.querySelectorAll('[n:bind]').forEach((el, i) => {
+        const id = ensureId(el);
+        const tag = el.tagName.toLowerCase();
+
+        const bind = el.getAttribute('n:bind');
+        el.removeAttribute('n:bind');
+
+        const isInput = ['input', 'textarea', 'select'].includes(tag) || el.getAttribute('contenteditable') === 'true';
+
+        if (!isInput) return;
+
+        const variable = bind.trim().slice(3, -1);
+        const prop = tag === 'input' || tag === 'textarea' || tag === 'select' ? 'value' : 'innerText';
+
+        const fn = `${variable}${i}@${scope}`;
+
+        addScript(
+            scripts,
+            scope,
+            `__${scope}__.addEventHandler('${fn}',$=>{
+  $.${variable} = document.getElementById(\`${id}\`).${prop}
+}, true);`
+        );
+
+        el.setAttribute('oninput', `window.nijor.bucket['${fn}']()`);
     });
+}
 
-    return ({
+/* ------------------------- Refs ------------------------- */
+
+function handleRefs(document, scripts) {
+    document.querySelectorAll('[n:ref]').forEach(el => {
+        const id = ensureId(el);
+        const variable = el.getAttribute('n:ref').trim().slice(3, -1);
+
+        scripts.defer += `\n $.${variable} = document.getElementById(\`${id}\`);`;
+        el.removeAttribute('n:ref');
+    });
+}
+
+/* ------------------------- Main ------------------------- */
+
+export function reactive({ document, scope, scripts }) {
+    handleVars(document, scripts, scope);
+    handleReactiveAttributes(document, scripts, scope);
+    handleClasses(document, scripts, scope);
+    handleBindings(document, scripts, scope);
+    handleRefs(document, scripts);
+
+    return {
         name: "Reactivity",
         data: {
             body: document.body.innerHTML,
             ...scripts
         }
-    });
+    };
 }

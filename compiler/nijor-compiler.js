@@ -120,14 +120,15 @@ export default options => {
                 // Write style sheets
                 await WriteStyleSheet(document, scope);
 
-                const [$import, $script] = Scripts.sanitize(virtual_doc);
+                const [$import, $script, $global, $onMount, $onUnmount] = Scripts.sanitize(virtual_doc);
                 const $components = Scripts.ReturnModule(virtual_doc, scope);
                 const scripts = {
                     import: new Set($import),
                     components: $components,
-                    global: "",
+                    global: $global || "",
                     main: compileReactive($script),
-                    defer: virtual_doc.window.document.querySelector('script[defer]')?.innerHTML || ""
+                    defer: $onMount || "",
+                    cleanup: $onUnmount || ""
                 };
 
                 const plugins = [onEvent, slot, loop, reactive, ...(nijor_plugins ?? [])];
@@ -163,11 +164,13 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
         child.setAttribute('n-scope', scope);
     });
 
-    // Add _id attribute to components
+    // Add _id and _parent attribute to components
     document.body.querySelectorAll('*').forEach((child) => {
         const [component_name, component_scope] = child.tagName.toLowerCase().split('_');
         if (component_scope === scope) {
+            const parent_type = module_type === "component" ? `\${$parent}`: module_type;
             child.setAttribute('_id', component_name + GenerateID(5, 7).toLowerCase());
+            child.setAttribute('_parent', parent_type);
         }
     });
 
@@ -192,6 +195,7 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             scripts.global = data.global;
             scripts.main = data.main;
             scripts.defer = data.defer;
+            scripts.cleanup = data.cleanup;
         } catch (error) {
             console.error(`Plugin[${name}] : ${error}`);
         }
@@ -204,12 +208,8 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
     document.body.querySelectorAll("[n:loop]").forEach(l => l.removeAttribute('n:loop'));
 
     const calls = compressArray(allComponents).map(([name, count]) => {
-        return `$${name.replaceAll('-','')}.run('${name}',${count})`;
+        scripts.global += `\n __${scope}__.addDependency($${name.replaceAll('-','')},'${name}',${count})`;
     });
-
-    if (calls.length) {
-        scripts.defer = `await Promise.all([${calls.join(',')}]);\n` + scripts.defer;
-    }
 
     const imports = [...scripts.import].join('\n');
 
@@ -229,7 +229,7 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
         process.layoutMap.set(getRoute(filename), layout);
 
         return `
-            import page_${process.seed} from 'nijor/page';
+            import page_${process.seed}, { cleanupFunctions as $cleanup_${process.seed} } from 'nijor/page';
             ${imports}
             ${scripts.components}
 
@@ -238,11 +238,12 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             const __${scope}__ = new page_${process.seed}(async function(${props},$){
                 document.title = \`${title}\`;
                 ${scripts.main}
+                ${scripts.cleanup ? `$cleanup_${process.seed}.add(()=>{ ${scripts.cleanup} });` : ''}
                 return(\`${template}\`);
-            },async function(${props},$){
-                ${scripts.defer}
-            },'${layout}',
-            '${scope}');
+            },'${layout}');
+
+
+            ${scripts.defer !="" ? `__${scope}__.cb = async (${props},$) => { ${scripts.defer} };` : ''}
 
             ${scripts.global}
 
@@ -252,18 +253,19 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
 
     if (module_type == "layout") {
         return `
-            import layout_${process.seed} from 'nijor/layout';
+            import layout_${process.seed}, { cleanupFunctions as $cleanup_${process.seed} } from 'nijor/layout';
             ${imports}
             ${scripts.components}
 
             const $id = "__${scope}";
 
-            const __${scope}__ = new layout_${process.seed}(async function(){
+            const __${scope}__ = new layout_${process.seed}(async function($){
                 ${scripts.main}
+                ${scripts.cleanup ? `$cleanup_${process.seed}.add(()=>{ ${scripts.cleanup} });` : ''}
                 return(\`${template}\`);
-            },async function(){
-                ${scripts.defer}
-            },'${scope}');
+            });
+
+            ${scripts.defer !="" ? `__${scope}__.cb = async $ => { ${scripts.defer} };` : ''}
 
             ${scripts.global}
 
@@ -272,17 +274,23 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
     }
 
     return `
+        import { cleanupFunctions as $cleanup_layout_${process.seed} } from 'nijor/layout';
+        import { cleanupFunctions as $cleanup_page_${process.seed} } from 'nijor/page';
         import component_${process.seed} from 'nijor/component';
         ${imports}
         ${scripts.components}
+
         
-        const __${scope}__ = new component_${process.seed}(async function(${props},$id,$){
+        const __${scope}__ = new component_${process.seed}(async function(${props},$id,$parent,$){
             ${scripts.main}
+            ${scripts.cleanup ? `
+                if($parent === "layout") $cleanup_layout_${process.seed}.add(()=>{ ${scripts.cleanup} });
+                else if($parent === "page") $cleanup_page_${process.seed}.add(()=>{ ${scripts.cleanup} });
+            ` : ''}
             return(\`${template}\`);
-        },async function(${props},$id,$){
-            ${scripts.defer}
-        },
-        '${scope}');
+        });
+
+        ${scripts.defer !="" ? `__${scope}__.cb = async (${props},$id,$) => { ${scripts.defer} };` : ''}
 
         ${scripts.global}
 

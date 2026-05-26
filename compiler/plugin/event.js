@@ -1,235 +1,151 @@
 import * as acorn from 'acorn';
-import { simple as walkSimple } from 'acorn-walk';
-import MagicString from "magic-string";
+import { simple as walk } from 'acorn-walk';
 
-function getElementsWithOnEventAttributes(doc) {
-    return Array.from(doc.querySelectorAll('*')).filter(el =>
-        Array.from(el.attributes).some(attr => /^on:\w+$/.test(attr.name))
+/* ------------------------- DOM Utilities ------------------------- */
+
+function getEventElements(doc) {
+    return [...doc.querySelectorAll('*')].filter(el =>
+        [...el.attributes].some(attr => /^on:\w+$/.test(attr.name))
     );
 }
 
-let registeredFunctions = [];
+/* ------------------------- Function Registry ------------------------- */
 
-function registerGlobalFunction(funcExpr, scope) {
-    const match = funcExpr.match(/(\w+)\s*\(/);
-    if (!match) return '';
-    const name = match[1];
-    const marker = `${name}@${scope}`
-    if(registeredFunctions.includes(`${marker}`)) return '';
-    registeredFunctions.push(`${name}@${scope}`);
-    return `window.nijor.bucket['${marker}'] = ${name}; window.nijor.bucket_size++;`;
+const registered = new Set();
+
+function buildMarker(name) {
+    return `${name}@\${$id}`;
 }
 
-function registerFunction(funcExpr, scope) {
-    const isAwait = /^\s*await\s+/.test(funcExpr);
-    const cleanExpr = funcExpr.replace(/^\s*await\s+/, '');
-    const match = cleanExpr.match(/(\w+)\s*\((.*?)\)/);
-    if (!match) return '';
+function registerHandler(fnName, scope, { awaitable = false, stateful = false } = {}) {
+    const marker = buildMarker(fnName);
 
-    const name = match[1];
-    const wrapper = isAwait ? `async (...args)=> await ${name}(...args, $);` : `(...args)=> ${name}(...args, $);`;
+    if (registered.has(marker)) return '';
+    registered.add(marker);
 
-    const marker = `${name}\${$id}@${scope}`;
-    if(registeredFunctions.includes(`${marker}`)) return '';
-    registeredFunctions.push(marker);
+    if (stateful && awaitable) return `__${scope}__.addEventHandler(\`${marker}\`, ${fnName}, true, true);`;
 
-    return `window.nijor.bucket[\`${marker}\`] = ${wrapper}; window.nijor.bucket_size++;`;
+    if (stateful) return `__${scope}__.addEventHandler(\`${marker}\`, ${fnName}, true);`;
+
+    return `__${scope}__.addEventHandler(\`${marker}\`, ${fnName});`;
 }
 
-function rewriteCall(fnCall, scope, isStateFunction = false) {
-    return fnCall.replace(
+/* ------------------------- Parsing Utilities ------------------------- */
+
+function extractFunctionName(expr) {
+    const clean = expr.replace(/^\s*await\s+/, '');
+    return clean.match(/(\w+)\s*\(/)?.[1] || null;
+}
+
+function isAwaitExpression(expr) {
+    return /^\s*await\s+/.test(expr);
+}
+
+function rewriteCall(expr) {
+    return expr.replace(
         /(\breturn\s*\(?\s*)?(await\s*)?(\w+)\s*\(/,
-        (_, returnPrefix = '', awaitPrefix = '', name) => {
-            const key = isStateFunction ? `${name}\${$id}@${scope}` : `${name}@${scope}`;
-            return `${returnPrefix}${awaitPrefix}window.nijor.bucket['${key}'](`;
+        (_, ret = '', aw = '', name) => {
+            return `${ret}${aw}window.nijor.bucket['${buildMarker(name)}'](`;
         }
     );
 }
 
-function getFunctionName(expr) {
-    const clean = expr.replace(/^\s*await\s+/, '');
-    const match = clean.match(/(\w+)\s*\(/);
-    return match ? match[1] : null;
-}
+/* ------------------------- AST Analysis ------------------------- */
 
-function hasStateAsLastParam(jsString, fnName) {
+function hasStateParam(js, fnName) {
     let ast;
     try {
-        ast = acorn.parse(jsString, {
-            ecmaVersion: 'latest',
-            sourceType: 'module',
-        });
+        ast = acorn.parse(js, { ecmaVersion: 'latest', sourceType: 'module' });
     } catch {
         return false;
     }
 
     let found = false;
 
-    walkSimple(ast, {
+    const check = params =>
+        params?.length &&
+        resolveParam(params.at(-1)) === '$';
+
+    walk(ast, {
         FunctionDeclaration(node) {
             if (node.id?.name === fnName) {
-                found = checkParams(node.params);
+                found = check(node.params);
             }
         },
         VariableDeclarator(node) {
-            if (node.id?.name === fnName) {
-                const init = node.init;
-                if (init?.type === 'ArrowFunctionExpression' || init?.type === 'FunctionExpression') {
-                    found = checkParams(init.params);
-                }
-            }
+            if (node.id?.name !== fnName) return;
+            const fn = node.init;
+            if (isFunction(fn)) found = check(fn.params);
         },
         Property(node) {
             const key = node.key?.name ?? node.key?.value;
-            if (key === fnName) {
-                const val = node.value;
-                if (val?.type === 'FunctionExpression' || val?.type === 'ArrowFunctionExpression') {
-                    found = checkParams(val.params);
-                }
+            if (key !== fnName) return;
+            if (isFunction(node.value)) {
+                found = check(node.value.params);
             }
         },
         MethodDefinition(node) {
             const key = node.key?.name ?? node.key?.value;
             if (key === fnName) {
-                found = checkParams(node.value.params);
+                found = check(node.value.params);
             }
-        },
+        }
     });
 
     return found;
 }
 
-function checkParams(params) {
-    if (!params?.length) return false;
-    return resolveParamName(params[params.length - 1]) === '$';
+function isFunction(node) {
+    return node?.type === 'ArrowFunctionExpression' ||
+           node?.type === 'FunctionExpression';
 }
 
-function resolveParamName(param) {
+function resolveParam(param) {
     switch (param?.type) {
-        case 'Identifier':
-            return param.name;
-        case 'AssignmentPattern':
-            return resolveParamName(param.left);
-        case 'RestElement':
-            return resolveParamName(param.argument);
-        default:
-            return null;
+        case 'Identifier': return param.name;
+        case 'AssignmentPattern': return resolveParam(param.left);
+        case 'RestElement': return resolveParam(param.argument);
+        default: return null;
     }
 }
 
-function extractFunction(code, functionName) {
-    // ── 1. Parse
-    const ast = acorn.parse(code, {
-        ecmaVersion: "latest",
-        sourceType: "module",
-        locations: true,
-    });
+/* ------------------------- Main Transformer ------------------------- */
 
-    // ── 2. Walk the AST looking for the target function
-    let start = null;
-    let end = null;
+export default function ({ document, scope, scripts }) {
+    const elements = getEventElements(document);
 
-    walkSimple(ast, {
-        // function foo() {}
-        FunctionDeclaration(node) {
-            if (node.id && node.id.name === functionName) {
-                start = node.start;
-                end = node.end;
-            }
-        },
-
-        // const foo = function() {}  |  const foo = () => {}
-        VariableDeclaration(node) {
-            for (const declarator of node.declarations) {
-                if (
-                    declarator.id &&
-                    declarator.id.name === functionName &&
-                    declarator.init &&
-                    (declarator.init.type === "FunctionExpression" ||
-                        declarator.init.type === "ArrowFunctionExpression")
-                ) {
-                    // Grab the whole `const foo = ...` statement
-                    start = node.start;
-                    end = node.end;
-                }
-            }
-        },
-
-        // { foo() {} }  (object method shorthand)
-        Property(node) {
-            if (
-                node.key &&
-                node.key.name === functionName &&
-                node.value &&
-                node.value.type === "FunctionExpression"
-            ) {
-                start = node.start;
-                end = node.end;
-            }
-        },
-
-        // class C { foo() {} }
-        MethodDefinition(node) {
-            if (node.key && node.key.name === functionName) {
-                start = node.start;
-                end = node.end;
-            }
-        },
-    });
-
-    if (start === null) {
-        return { extracted: "", remainder: code };
-    }
-
-    // ── 3. Extract & remove using MagicString ───────────────────────────────────
-    const ms = new MagicString(code);
-
-    // Consume the trailing newline so we don't leave a blank line behind
-    let removeEnd = end;
-    if (code[removeEnd] === "\n") removeEnd += 1;
-
-    const extracted = code.slice(start, end);
-    ms.remove(start, removeEnd);
-
-    const remainder = ms.toString();
-
-    return { extracted, remainder };
-}
-
-export default function ({ document, scope, module_type, scripts }) {
-    getElementsWithOnEventAttributes(document).forEach(el => {
+    elements.forEach(el => {
         const events = el.getAttributeNames().filter(a => a.startsWith('on:'));
 
         events.forEach(attr => {
             const handler = el.getAttribute(attr);
             el.removeAttribute(attr);
 
-            const fnName = getFunctionName(handler);
+            const fnName = extractFunctionName(handler);
             if (!fnName) return;
 
-            const { extracted, remainder } = extractFunction(scripts.main, fnName);
-            scripts.main = remainder;
-            scripts.global += extracted;
+            const stateful = hasStateParam(scripts.global, fnName);
+            const awaitable = isAwaitExpression(handler);
 
-            const isStateFunction = hasStateAsLastParam(scripts.global, fnName);
+            const registration = registerHandler(fnName, scope, {
+                awaitable,
+                stateful
+            });
 
-            const rewrittenCall = rewriteCall(handler, scope, isStateFunction);
-
-            if (isStateFunction) {
-                scripts.main += registerFunction(handler, scope);
-            } else {
-                scripts.global += registerGlobalFunction(handler, scope);
+            if (registration) {
+                scripts.main += `\n${registration}`;
             }
 
-            el.setAttribute(attr.replace('on:', 'on'), rewrittenCall);
+            const rewritten = rewriteCall(handler);
+            el.setAttribute(attr.replace('on:', 'on'), rewritten);
         });
     });
 
-    return ({
+    return {
         name: "Event Handler",
-        data:{
-        body: document.body.innerHTML,
-        ...scripts
+        data: {
+            body: document.body.innerHTML,
+            ...scripts
         }
-    });
+    };
 }

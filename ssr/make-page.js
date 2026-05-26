@@ -98,8 +98,10 @@ function resolveHtml(dom, resolve) {
     }
 
     // Hydration imports
-    hydrationScript.innerHTML += `await import('/modules/layout/${process.layoutMap.get(route)}.js');`;
-    hydrationScript.innerHTML += `await import('/modules/${file}');`;
+    hydrationScript.innerHTML += `const {default : layout} = await import('/modules/layout/${process.layoutMap.get(route)}.js');`;
+    hydrationScript.innerHTML += `const {default : page} = await import('/modules/${file}');`;
+    hydrationScript.innerHTML += `layout.hydrate();`;
+    hydrationScript.innerHTML += `page.hydrate();`;
 
     // Metadata injection
     if (process.metadataMap.has(route)) {
@@ -109,7 +111,7 @@ function resolveHtml(dom, resolve) {
 
     // Clean body
     dom.window.document.body.removeAttribute('theme');
-    dom.window.document.body.setAttribute('rendered', '');
+    dom.window.document.body.classList.add('rendered');
 
     const html = dom.serialize();
 

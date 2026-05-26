@@ -4,10 +4,7 @@ export function runComponents(element, scope) {
     const regex = new RegExp(`\\w+_${scope}`);
     let components = [];
 
-    [...element.querySelectorAll('*')]
-        .filter(el => regex.test(el.tagName.toLowerCase()))
-        .reverse()
-        .forEach(component => components.push(component.tagName.toLowerCase()));
+    [...element.querySelectorAll('*')].filter(el => regex.test(el.tagName.toLowerCase())).reverse().forEach(component => components.push(component.tagName.toLowerCase()));
 
     const calls = compressArray(components).map(([name, count]) => {
         return `$${name.replaceAll('-','')}.run('${name}')`;
@@ -16,6 +13,21 @@ export function runComponents(element, scope) {
     if (!calls.length) return '';
 
     return `await Promise.all([${calls.join(',')}]);`;
+}
+
+export function addDepenencies(element, scope) {
+    const regex = new RegExp(`\\w+_${scope}`);
+    let components = [];
+
+    [...element.querySelectorAll('*')].filter(el => regex.test(el.tagName.toLowerCase())).reverse().forEach(component => components.push(component.tagName.toLowerCase()));
+
+    const calls = compressArray(components).map(([name, count]) => {
+        return ` __${scope}__.addDependency($${name.replaceAll('-','')},'${name}',${count})`
+    });
+
+    if (!calls.length) return '';
+
+    return calls.join('\n');
 }
 
 export function getComponents(element, scope) {
