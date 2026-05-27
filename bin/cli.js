@@ -30,7 +30,7 @@ const commandsMap = {
 
 function DefaultCommand() {
     const command = userArgs[0];
-    if (!!!command) console.print(`Nijor v${pkg.version} !\n`, [0, 195, 255]);
+    if (!!!command) console.print(`Nijor v${pkg.version}\n`, [0, 195, 255]);
     if (command) console.log(`"${highlight(command, [255, 251, 14])}" is not recognized by the ${highlight('Nijor CLI', [0, 195, 255])} ! \n`);
     console.log(`The following commands are available :`);
     console.log(`   ${highlight('build', [255, 251, 14])} : For building a project in production mode`);

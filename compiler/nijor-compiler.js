@@ -238,12 +238,14 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             const __${scope}__ = new page_${process.seed}(async function(${props},$){
                 document.title = \`${title}\`;
                 ${scripts.main}
-                ${scripts.cleanup ? `$cleanup_${process.seed}.add(()=>{ ${scripts.cleanup} });` : ''}
+                ${scripts.cleanup ? `$cleanup_${process.seed}.add(()=>{ 
+                    ${scripts.cleanup} 
+                });` : ''}
+                ${scripts.defer !="" ? `__${scope}__.cb = async (${props},$) => { 
+                    ${scripts.defer} 
+                };` : ''}
                 return(\`${template}\`);
             },'${layout}');
-
-
-            ${scripts.defer !="" ? `__${scope}__.cb = async (${props},$) => { ${scripts.defer} };` : ''}
 
             ${scripts.global}
 
@@ -261,11 +263,14 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
 
             const __${scope}__ = new layout_${process.seed}(async function($){
                 ${scripts.main}
-                ${scripts.cleanup ? `$cleanup_${process.seed}.add(()=>{ ${scripts.cleanup} });` : ''}
+                ${scripts.cleanup ? `$cleanup_${process.seed}.add(()=>{ 
+                    ${scripts.cleanup} 
+                });` : ''}
+                ${scripts.defer !="" ? `__${scope}__.cb = async $ => { 
+                    ${scripts.defer} 
+                };` : ''}
                 return(\`${template}\`);
             });
-
-            ${scripts.defer !="" ? `__${scope}__.cb = async $ => { ${scripts.defer} };` : ''}
 
             ${scripts.global}
 
@@ -284,13 +289,18 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
         const __${scope}__ = new component_${process.seed}(async function(${props},$id,$parent,$){
             ${scripts.main}
             ${scripts.cleanup ? `
-                if($parent === "layout") $cleanup_layout_${process.seed}.add(()=>{ ${scripts.cleanup} });
-                else if($parent === "page") $cleanup_page_${process.seed}.add(()=>{ ${scripts.cleanup} });
+                if($parent === "layout") $cleanup_layout_${process.seed}.add(()=>{ 
+                    ${scripts.cleanup}
+                });
+                else if($parent === "page") $cleanup_page_${process.seed}.add(()=>{ 
+                    ${scripts.cleanup}
+                });
             ` : ''}
+            ${scripts.defer !="" ? `__${scope}__.cb = async (${props},$id,$) => { 
+                ${scripts.defer}
+            };` : ''}
             return(\`${template}\`);
         });
-
-        ${scripts.defer !="" ? `__${scope}__.cb = async (${props},$id,$) => { ${scripts.defer} };` : ''}
 
         ${scripts.global}
 
@@ -366,7 +376,11 @@ function processAttributes(element) {
             attrName = "href";
         }
 
-        if (attrName.includes("n:") || attrName.includes("class:")) continue; // Don't process n:bind or n:ref
+        if (attrName.startsWith("n:") || attrName.includes("class:")) continue; // Don't process n:bind or n:ref
+        if(attrName.startsWith("on:")) {
+            element.setAttribute(attrName, transformCurlyExpressions(value));
+            continue;
+        }
 
         if (!value.includes('{')) continue;
 
