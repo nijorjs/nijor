@@ -10,6 +10,7 @@ function getEventElements(doc) {
 }
 
 /* ------------------------- Function Registry ------------------------- */
+const registered = new Set();
 
 function buildMarker(name) {
     return `${name}@\${$id}`;
@@ -17,6 +18,9 @@ function buildMarker(name) {
 
 function registerHandler(fnName, scope, { awaitable = false, stateful = false } = {}) {
     const marker = buildMarker(fnName);
+
+    if (registered.has(marker)) return '';
+    registered.add(marker);
 
     if (stateful && awaitable) return `__${scope}__.addEventHandler(\`${marker}\`, ${fnName}, true, true);`;
 
@@ -107,6 +111,7 @@ function resolveParam(param) {
 /* ------------------------- Main Transformer ------------------------- */
 
 export default function ({ document, scope, scripts }) {
+    registered.clear();
     const elements = getEventElements(document);
 
     elements.forEach(el => {
