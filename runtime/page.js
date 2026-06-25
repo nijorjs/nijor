@@ -44,11 +44,8 @@ export default class {
         this.subscriptions.add([variable,handler]);
     }
 
-    unsub(){
-        this.subscriptions.clear();
-    }
-
     activateReactiveStates($){
+        $.$unsubscribeAll();
         for (const [variable,handler] of this.subscriptions){
             const unsubscribe = $.$subscribe(variable,handler);
             cleanupFunctions.add(unsubscribe);

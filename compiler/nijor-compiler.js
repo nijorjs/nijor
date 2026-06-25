@@ -240,7 +240,6 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
                 ${scripts.main}
                 ${scripts.cleanup ? `$cleanup_${process.seed}.add(()=>{ 
                     ${scripts.cleanup}
-                    __${scope}__.unsub();
                 });` : ''}
                 ${scripts.defer !="" ? `__${scope}__.cb = async (${props},$) => { 
                     ${scripts.defer} 
@@ -266,7 +265,6 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
                 ${scripts.main}
                 ${scripts.cleanup ? `$cleanup_${process.seed}.add(()=>{ 
                     ${scripts.cleanup} 
-                    __${scope}__.unsub();
                 });` : ''}
                 ${scripts.defer !="" ? `__${scope}__.cb = async $ => { 
                     ${scripts.defer} 
@@ -293,11 +291,9 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             ${scripts.cleanup ? `
                 if($parent === "layout") $cleanup_layout_${process.seed}.add(()=>{ 
                     ${scripts.cleanup}
-                    __${scope}__.unsub();
                 });
                 else if($parent === "page") $cleanup_page_${process.seed}.add(()=>{ 
                     ${scripts.cleanup}
-                    __${scope}__.unsub();
                 });
             ` : ''}
             ${scripts.defer !="" ? `__${scope}__.cb = async (${props},$id,$) => { 
