@@ -240,6 +240,7 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
                 ${scripts.main}
                 ${scripts.cleanup ? `$cleanup_${process.seed}.add(()=>{ 
                     ${scripts.cleanup}
+                    $.$unsubscribeAll();
                 });` : ''}
                 ${scripts.defer !="" ? `__${scope}__.cb = async (${props},$) => { 
                     ${scripts.defer} 
@@ -264,7 +265,8 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             const __${scope}__ = new layout_${process.seed}(async function($){
                 ${scripts.main}
                 ${scripts.cleanup ? `$cleanup_${process.seed}.add(()=>{ 
-                    ${scripts.cleanup} 
+                    ${scripts.cleanup}
+                    $.$unsubscribeAll(); 
                 });` : ''}
                 ${scripts.defer !="" ? `__${scope}__.cb = async $ => { 
                     ${scripts.defer} 
@@ -291,9 +293,11 @@ async function transformCode(virtual_doc, scope, scripts, module_type, plugins, 
             ${scripts.cleanup ? `
                 if($parent === "layout") $cleanup_layout_${process.seed}.add(()=>{ 
                     ${scripts.cleanup}
+                    $.$unsubscribeAll();
                 });
                 else if($parent === "page") $cleanup_page_${process.seed}.add(()=>{ 
                     ${scripts.cleanup}
+                    $.$unsubscribeAll();
                 });
             ` : ''}
             ${scripts.defer !="" ? `__${scope}__.cb = async (${props},$id,$) => { 

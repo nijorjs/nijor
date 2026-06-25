@@ -56,7 +56,6 @@ export default class {
     }
 
     activateReactiveStates(parent_type, $) {
-        $.$unsubscribeAll();
         for (const [variable, handler] of this.subscriptions) {
             const unsubscribe = $.$subscribe(variable, handler);
             if (parent_type === "layout") cleanupFunctionsLayout.add(unsubscribe);

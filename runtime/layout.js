@@ -44,7 +44,6 @@ export default class {
     }
 
     activateReactiveStates($) {
-        $.$unsubscribeAll();
         for (const [variable, handler] of this.subscriptions) {
             const unsubscribe = $.$subscribe(variable, handler);
             cleanupFunctions.add(unsubscribe);
